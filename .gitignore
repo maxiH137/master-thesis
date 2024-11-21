@@ -1,3 +1,7 @@
 /conda
 /libs
 /utils
+/wear loso models
+/models/__pycache__
+*.png
+*.zip
