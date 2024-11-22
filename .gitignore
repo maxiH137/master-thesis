@@ -6,7 +6,9 @@
 !/conda/lib/site-packages/breaching/
 /conda/lib/site-packages/breaching/*
 !/conda/lib/site-packages/breaching/attacks/
+/conda/lib/site-packages/breaching/attacks/*
 !/conda/lib/site-packages/breaching/attacks/*.py
+
 
 /libs
 /utils
