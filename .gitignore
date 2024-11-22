@@ -1,4 +1,13 @@
-/conda
+/conda/*
+!/conda/lib/
+/conda/lib/*
+!/conda/lib/site-packages/
+/conda/lib/site-packages/*
+!/conda/lib/site-packages/breaching/
+/conda/lib/site-packages/breaching/*
+!/conda/lib/site-packages/breaching/attacks/
+!/conda/lib/site-packages/breaching/attacks/*.py
+
 /libs
 /utils
 /wear loso models

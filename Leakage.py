@@ -61,7 +61,7 @@ def main(args):
     setup = dict(device=torch.device("cpu"), dtype=torch.float)
     
     config = load_config(args.config)
-    trained = True
+    trained = False
     grads = []
 
     if args.model == 'TinyHAR' and trained:
