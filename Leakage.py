@@ -30,8 +30,10 @@ from models.TinyHAR import TinyHAR
 from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_seed, InertialDataset
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
+from Unbalanced_Sampler import CustomSampler
 
 import os
+import random
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Opt-in to the future behavior to prevent the warning
@@ -63,9 +65,10 @@ class data_config_inertial:
         self.attributes[key] = value
 
 class Leakage():
-    def __init__(self, args = None, run = None):
+    def __init__(self, args = None, run = None, config = None):
         self.args = args
         self.run = run
+        self.config = config
     
     def main(self, args):
         
@@ -167,11 +170,13 @@ class Leakage():
             test_dataset = InertialDataset(val_data, config['dataset']['window_size'], config['dataset']['window_overlap'])
 
             # define dataloaders
+            custom_sampler = CustomSampler(test_dataset, random.randint(0, config['dataset']['num_classes'] - 1), random.randint(0, config['dataset']['num_classes'] - 1))
             config['init_rand_seed'] = args.seed
             rng_generator = fix_random_seed(config['init_rand_seed'], include_cuda=True) 
             train_loader = DataLoader(train_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
             val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
-        
+            unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=custom_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+            
             if 'tinyhar' in config['name'] and trained:
                 args.resume = f'wear loso models/tinyhar/epoch_100_loso_sbj_{i}.pth.tar'
             if 'deepconvlstm' in config['name'] and trained:
@@ -276,8 +281,7 @@ class Leakage():
             ]
 
             # LOAD DATA
-            x=0
-            for _, (inputs, targets) in enumerate(val_loader, 0):
+            for _, (inputs, targets) in enumerate(unbalanced_loader, 0):
                 
                 if 'deepconvlstm' in config['name']:
                     val_data = inputs
@@ -321,10 +325,21 @@ class Leakage():
                 # User-side computation:
                 #loss = loss_fn(model(datapoint[None, ...]), labels)
                 
-                loss = loss_fn(model(onedimdata), labels)
+                output = model(onedimdata)
+                loss = loss_fn(output, labels)
+                
                 gradients=torch.autograd.grad(loss, model.parameters())
                 
+                # Access gradients
+                for (name, _), grad in zip(model.named_parameters(), gradients):
+                    print(f"Gradient of {name}: {grad}")
+                grad_bias = gradients[-1]
+                grad_weight = gradients[-2]
                 
+                if run is not None:
+                    run['gradients/weight'].log(grad_weight)
+                    run['gradients/bias'].log(grad_bias)
+                                
                 shared_data = [
                     dict(
                         gradients=gradients,
@@ -345,8 +360,8 @@ class Leakage():
                 reconstructed_user_data = (reconstructed_user_data - reconstructed_user_data.min()) / (reconstructed_user_data.max() - reconstructed_user_data.min())
                 
 
-                OriginalImg = onedimdata.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
-                ReconstructedImg = reconstructed_user_data.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
+                OriginalData = onedimdata.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
+                ReconstructedData = reconstructed_user_data.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
                 
                 gradient = torch.round(shared_data[0]["gradients"][-1], decimals=6)
                 
@@ -400,8 +415,8 @@ class Leakage():
                 if run is not None:
                     transform = T.ToPILImage()
                     run[split_name].append({"percentage": percentage})
-                    run[split_name + "/images/original"].append(transform(OriginalImg))
-                    run[split_name + "/images/reconstruction"].append(transform(ReconstructedImg))
+                    run[split_name + "/images/original"].append(transform(OriginalData))
+                    run[split_name + "/images/reconstruction"].append(transform(ReconstructedData))
             
             if run is not None:
                 run[split_name +'/final_perecentage'] = run[split_name +'/percentage'].fetch_values().mean().value
@@ -430,7 +445,7 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat', default='gcd', type=str)
+    parser.add_argument('--label_strat', default='llbg', type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--iterations', default='1', type=str)
     parser.add_argument('--dataset', default='wear', type=str)
