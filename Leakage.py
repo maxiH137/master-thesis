@@ -30,7 +30,7 @@ from models.TinyHAR import TinyHAR
 from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_seed, InertialDataset
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
-from Unbalanced_Sampler import CustomSampler
+from Unbalanced_Sampler import UnbalancedSampler
 
 import os
 import random
@@ -170,12 +170,12 @@ class Leakage():
             test_dataset = InertialDataset(val_data, config['dataset']['window_size'], config['dataset']['window_overlap'])
 
             # define dataloaders
-            custom_sampler = CustomSampler(test_dataset, random.randint(0, config['dataset']['num_classes'] - 1), random.randint(0, config['dataset']['num_classes'] - 1))
+            unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes'] - 1), random.randint(0, config['dataset']['num_classes'] - 1))
             config['init_rand_seed'] = args.seed
             rng_generator = fix_random_seed(config['init_rand_seed'], include_cuda=True) 
             train_loader = DataLoader(train_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
             val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
-            unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=custom_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+            unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
             
             if 'tinyhar' in config['name'] and trained:
                 args.resume = f'wear loso models/tinyhar/epoch_100_loso_sbj_{i}.pth.tar'
