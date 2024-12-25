@@ -31,6 +31,7 @@ from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_s
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
 from Unbalanced_Sampler import UnbalancedSampler
+from DPrivacy import DPrivacy
 
 import os
 import random
@@ -69,6 +70,7 @@ class Leakage():
         self.args = args
         self.run = run
         self.config = config
+        self.dpri = DPrivacy(multiplier=0.1, clip=0.1)
     
     def main(self, args):
         
