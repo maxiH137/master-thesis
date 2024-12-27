@@ -105,38 +105,17 @@ class Leakage():
             run['config'].upload(os.path.join(log_dir, 'cfg.txt'))
             run['args/trained'] = args.trained
             run['args/model'] = config['name']
-            run['args/dataset'] = args.dataset
-            run['args/attack'] = args.attack
+            run['args/dataset'] = config['dataset_name']
+            run['args/balanced'] = args.balanced
             run['args/datapoints'] = config['loader']['train_batch_size']
             run['args/classes'] = config['dataset']['num_classes']
-            run['args/label_strat'] = args.label_strat
+            run['args/label_strat_array'] = args.label_strat_array
         
         device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         setup = dict(device=torch.device("cpu"), dtype=torch.float)
         
         trained = args.trained
         grads = []
-
-        if trained:
-            with open('labelsT_' + str(config['name']) + '.csv', 'w', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(['GT', 'Pred', 'Sbj'])
-
-            with open('gradientsT_' + str(config['name']) + '.csv', 'w', newline='') as file:
-                    writer = csv.writer(file)
-                    for g in range(config['dataset']['num_classes'] + 1):
-                        grads.append('G' + str(g))
-                    writer.writerow(grads)
-        else:
-            with open('labels_' + str(config['name']) + '.csv', 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(['GT', 'Pred', 'Sbj'])
-
-            with open('gradients_' + str(config['name']) + '.csv', 'w', newline='') as file:
-                    writer = csv.writer(file)
-                    for g in range(config['dataset']['num_classes'] + 1):
-                        grads.append('G' + str(g))
-                    writer.writerow(grads)
 
         percentage_all = 0
         for i, anno_split in enumerate(config['anno_json']):
@@ -248,210 +227,236 @@ class Leakage():
             model.eval()
                 
             loss_fn = torch.nn.CrossEntropyLoss()
-
-            # This is the attacker:
-            #cfg_attack = breaching.get_attack_config("invertinggradients")
-            cfg_attack = breaching.get_attack_config(args.attack)
-            cfg_attack['optim']['max_iterations'] = int(args.iterations)
-            cfg_attack['label_strategy'] = args.label_strat
             
-            if args.neptune:
-                log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
-                sys.stdout = Logger(os.path.join(log_dir_atk, 'log.txt'))
-                with open(os.path.join(log_dir_atk, 'cfg_atk.txt'), 'w') as fid:
-                    pprint(cfg_attack, stream=fid)
-                    fid.flush()
-                
-                run['attack_config_name'] = args.attack
-                run['attack_config'].upload(os.path.join(log_dir_atk, 'cfg_atk.txt'))
-                
-            attacker = breaching.attacks.prepare_attack(model, loss_fn, cfg_attack, setup)
-
-            # ## Simulate an attacked FL protocol
-            # Server-side computation:
+            strat_array = args.label_strat_array
             
-            metadata = data_config_inertial()
-            metadata.shape = (1, 50, config['dataset']['input_dim'])
-            metadata.classes = config['dataset']['num_classes'] + 1
-            metadata['task'] = 'classification'
-            
-            server_payload = [
-                dict(
-                    #parameters=[p for p in model.parameters()], buffers=[b for b in model.buffers()], metadata=data_cfg_default
-                    parameters=[p for p in model.parameters()], buffers=[b for b in model.buffers()], metadata=metadata
-                )
-            ]
 
-            # LOAD DATA
-            for _, (inputs, targets) in enumerate(unbalanced_loader, 0):
+            for label_strat in strat_array:
                 
-                if 'deepconvlstm' in config['name']:
-                    val_data = inputs
-                    labels = targets
-                    all_labels = targets
-                    
-                    if(val_data.shape[0] != config['loader']['train_batch_size'] or 
-                    val_data.shape[1] != 50 or 
-                    val_data.shape[2] != config['dataset']['input_dim']):
-                        break
+                if args.neptune:
+                    run['label_attack' + '/' + str(label_strat) + '/attack_config_name'] = args.attack
+                
+                if trained:
+                    with open('labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                            writer = csv.writer(file)
+                            writer.writerow(['GT', 'Pred', 'Sbj'])
 
-                    
-                if 'tinyhar' in config['name']:
-                    val_data = inputs
-                    labels = targets
-                    all_labels = targets
-                    
-                    if(val_data.shape[0] != config['loader']['train_batch_size'] or 
-                    val_data.shape[1] != 50 or 
-                    val_data.shape[2] != config['dataset']['input_dim']):
-                        break
+                    with open('gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                            writer = csv.writer(file)
+                            for g in range(config['dataset']['num_classes'] + 1):
+                                grads.append('G' + str(g))
+                            writer.writerow(grads)
+                else:
+                    with open('labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                        writer = csv.writer(file)
+                        writer.writerow(['GT', 'Pred', 'Sbj'])
 
-                
-                if config['name'] == 'ResNet':
-                    val_data = inputs
-                    labels = targets
-                    all_labels = targets
-                    onedimdata = val_data
-                    
-                    if(val_data.shape[0] != config['loader']['train_batch_size'] or 
-                    val_data.shape[1] != 50 or 
-                    val_data.shape[2] != config['dataset']['input_dim']):
-                        break
-                
-                
-                # Normalize data
-                onedimdata = val_data.unsqueeze(1)
-                onedimdata = (onedimdata - onedimdata.min()) / (onedimdata.max() - onedimdata.min())
-                
+                    with open('gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                            writer = csv.writer(file)
+                            for g in range(config['dataset']['num_classes'] + 1):
+                                grads.append('G' + str(g))
+                            writer.writerow(grads)
 
-                # User-side computation:
-                #loss = loss_fn(model(datapoint[None, ...]), labels)
+                # This is the attacker:
+                #cfg_attack = breaching.get_attack_config("invertinggradients")
+                cfg_attack = breaching.get_attack_config(args.attack)
+                cfg_attack['optim']['max_iterations'] = int(config['attack']['iterations'])
+                cfg_attack['label_strategy'] = label_strat
                 
-                output = model(onedimdata)
-                loss = loss_fn(output, labels)
+                if args.neptune:
+                    log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
+                    sys.stdout = Logger(os.path.join(log_dir_atk, 'log.txt'))
+                    with open(os.path.join(log_dir_atk, 'cfg_atk.txt'), 'w') as fid:
+                        pprint(cfg_attack, stream=fid)
+                        fid.flush()
+                    
+                    run['label_attack' + '/' + str(label_strat) + '/attack_config'].upload(os.path.join(log_dir_atk, 'cfg_atk.txt'))
+                    
+                attacker = breaching.attacks.prepare_attack(model, loss_fn, cfg_attack, setup)
+
+                # ## Simulate an attacked FL protocol
+                # Server-side computation:
                 
-                gradients=torch.autograd.grad(loss, model.parameters())
+                metadata = data_config_inertial()
+                metadata.shape = (1, 50, config['dataset']['input_dim'])
+                metadata.classes = config['dataset']['num_classes'] + 1
+                metadata['task'] = 'classification'
                 
-                # Access gradients
-                for (name, _), grad in zip(model.named_parameters(), gradients):
-                    print(f"Gradient of {name}: {grad}")
-                grad_bias = gradients[-1]
-                grad_weight = gradients[-2]
-                
-                if run is not None:
-                    run['gradients/weight'].log(grad_weight)
-                    run['gradients/bias'].log(grad_bias)
-                                
-                shared_data = [
+                server_payload = [
                     dict(
-                        gradients=gradients,
-                        buffers=None,
-                        metadata=dict(num_data_points=config['loader']['train_batch_size'], labels=None, local_hyperparams=None,),
+                        parameters=[p for p in model.parameters()], buffers=[b for b in model.buffers()], metadata=metadata
                     )
                 ]
-                
-                # Attack:
-                reconstructed_user_data, stats = attacker.reconstruct(server_payload, shared_data, {}, dryrun=False)
-                
-                rlabels = reconstructed_user_data['labels']
-                rlabels = rlabels.sort()[0]
-                all_labels = all_labels.sort()[0]
-                #all_labels = all_labels[all_labels != 0]
 
-                reconstructed_user_data = reconstructed_user_data['data']
-                reconstructed_user_data = (reconstructed_user_data - reconstructed_user_data.min()) / (reconstructed_user_data.max() - reconstructed_user_data.min())
+                # LOAD DATA
+                loader = val_loader if args.balanced else unbalanced_loader
                 
+                for _, (inputs, targets) in enumerate(loader, 0):
+                    
+                    if 'deepconvlstm' in config['name']:
+                        val_data = inputs
+                        labels = targets
+                        all_labels = targets
+                        
+                        if(val_data.shape[0] != config['loader']['train_batch_size'] or 
+                        val_data.shape[1] != 50 or 
+                        val_data.shape[2] != config['dataset']['input_dim']):
+                            break
 
-                OriginalData = onedimdata.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
-                ReconstructedData = reconstructed_user_data.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
-                
-                gradient = torch.round(shared_data[0]["gradients"][-1], decimals=6)
-                
-                appendGradient = {f'G{i}': [gradient[i].item()] for i in range(config['dataset']['num_classes'] + 1)}
-                appendGradient = pd.DataFrame(appendGradient)
-                
-                appendData = pd.DataFrame({
-                    'GT': all_labels.numpy(),
-                    'Pred': rlabels.numpy(),
-                    'Sbj': val_sbjs[0]
-                })
+                        
+                    if 'tinyhar' in config['name']:
+                        val_data = inputs
+                        labels = targets
+                        all_labels = targets
+                        
+                        if(val_data.shape[0] != config['loader']['train_batch_size'] or 
+                        val_data.shape[1] != 50 or 
+                        val_data.shape[2] != config['dataset']['input_dim']):
+                            break
 
-                # Append to CSV without writing the header again
-                if(not trained):
-                    appendData.to_csv('labels_' + str(config['name']) + '.csv', mode='a', header=False, index=False)
-                else: 
-                    appendData.to_csv('labelsT_' + str(config['name']) + '.csv', mode='a', header=False, index=False)
-
-                if(not trained):
-                    appendGradient.to_csv('gradients_' + str(config['name']) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
-                else:
-                    appendGradient.to_csv('gradientsT_' + str(config['name']) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                    
+                    if config['name'] == 'ResNet':
+                        val_data = inputs
+                        labels = targets
+                        all_labels = targets
+                        onedimdata = val_data
+                        
+                        if(val_data.shape[0] != config['loader']['train_batch_size'] or 
+                        val_data.shape[1] != 50 or 
+                        val_data.shape[2] != config['dataset']['input_dim']):
+                            break
                     
                     
-                correct = 0
-                wrong = 0
-                predicted_labels = rlabels.clone()
+                    # Normalize data
+                    onedimdata = val_data.unsqueeze(1)
+                    onedimdata = (onedimdata - onedimdata.min()) / (onedimdata.max() - onedimdata.min())
+                    
 
-                for label in all_labels:
-                    if label in predicted_labels:
-                        correct += 1
-                        index = np.where(predicted_labels == label)[0][0]
+                    # User-side computation:
+                    #loss = loss_fn(model(datapoint[None, ...]), labels)
+                    
+                    output = model(onedimdata)
+                    loss = loss_fn(output, labels)
+                    
+                    gradients=torch.autograd.grad(loss, model.parameters())
+                    
+                    # Access gradients
+                    #for (name, _), grad in zip(model.named_parameters(), gradients):
+                        #print(f"Gradient of {name}: {grad}")
+                    grad_bias = gradients[-1]
+                    grad_weight = gradients[-2]
+                    
+                    if run is not None:
+                        run['label_attack' + '/' + str(label_strat) + '/gradients/weight'].log(grad_weight)
+                        run['label_attack' + '/' + str(label_strat) + '/gradients/bias'].log(grad_bias)
+                                    
+                    shared_data = [
+                        dict(
+                            gradients=gradients,
+                            buffers=None,
+                            metadata=dict(num_data_points=config['loader']['train_batch_size'], labels=None, local_hyperparams=None,),
+                        )
+                    ]
+                    
+                    # Attack:
+                    reconstructed_user_data, stats = attacker.reconstruct(server_payload, shared_data, {}, dryrun=False)
+                    
+                    rlabels = reconstructed_user_data['labels']
+                    rlabels = rlabels.sort()[0]
+                    all_labels = all_labels.sort()[0]
 
-                        # Delete the first occurrence
-                        predicted_labels = np.delete(predicted_labels, index)
+                    reconstructed_user_data = reconstructed_user_data['data']
+                    reconstructed_user_data = (reconstructed_user_data - reconstructed_user_data.min()) / (reconstructed_user_data.max() - reconstructed_user_data.min())
+                    
+
+                    OriginalData = onedimdata.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
+                    ReconstructedData = reconstructed_user_data.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
+                    
+                    gradient = torch.round(shared_data[0]["gradients"][-1], decimals=6)
+                    
+                    appendGradient = {f'G{i}': [gradient[i].item()] for i in range(config['dataset']['num_classes'] + 1)}
+                    appendGradient = pd.DataFrame(appendGradient)
+                    
+                    appendData = pd.DataFrame({
+                        'GT': all_labels.numpy(),
+                        'Pred': rlabels.numpy(),
+                        'Sbj': val_sbjs[0]
+                    })
+
+                    # Append to CSV without writing the header again
+                    if(not trained):
+                        appendData.to_csv('labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False)
+                    else: 
+                        appendData.to_csv('labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False)
+
+                    if(not trained):
+                        appendGradient.to_csv('gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
                     else:
-                        wrong +=1
+                        appendGradient.to_csv('gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                        
+                        
+                    correct = 0
+                    wrong = 0
+                    predicted_labels = rlabels.clone()
+
+                    for label in all_labels:
+                        if label in predicted_labels:
+                            correct += 1
+                            index = np.where(predicted_labels == label)[0][0]
+
+                            # Delete the first occurrence
+                            predicted_labels = np.delete(predicted_labels, index)
+                        else:
+                            wrong +=1
+                        
+                    percentage = int((all_labels.size()[0] - wrong) / all_labels.size()[0] * 100)
+
+                    block2 = ''
+                    block2 += 'Correct Labels: ' + str(correct) + '\n' 
+                    block2 += 'Wrong Labels: ' + str(wrong) + '\n' 
+                    block2 += 'Percentage: ' + str(percentage) + '%' + '\n'
+                    block2 += '\n'
+
+                    block1 = '\nLABEL LEAKAGE RESULTS:'
+                    print('\n'.join([block1, block2]))
                     
-                percentage = int((all_labels.size()[0] - wrong) / all_labels.size()[0] * 100)
-
-                block2 = ''
-                block2 += 'Correct Labels: ' + str(correct) + '\n' 
-                block2 += 'Wrong Labels: ' + str(wrong) + '\n' 
-                block2 += 'Percentage: ' + str(percentage) + '%' + '\n'
-                block2 += '\n'
-
-                block1 = '\nLABEL LEAKAGE RESULTS:'
-                print('\n'.join([block1, block2]))
+                    # submit final values to neptune 
+                    if run is not None:
+                        transform = T.ToPILImage()
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"percentage": percentage})
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/original"].append(transform(OriginalData))
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/reconstruction"].append(transform(ReconstructedData))
                 
-                # submit final values to neptune 
                 if run is not None:
-                    transform = T.ToPILImage()
-                    run[split_name].append({"percentage": percentage})
-                    run[split_name + "/images/original"].append(transform(OriginalData))
-                    run[split_name + "/images/reconstruction"].append(transform(ReconstructedData))
-            
-            if run is not None:
-                run[split_name +'/final_perecentage'] = run[split_name +'/percentage'].fetch_values().mean().value
-                percentage_all += run[split_name +'/percentage'].fetch_values().mean().value
-            
-            if trained and run is not None:
-                run[split_name + "/data/labelT-csv"].upload('labelsT_' + str(config['name']) + '.csv')
-                run[split_name + "/data/gradientT-csv"].upload('gradientsT_' + str(config['name']) + '.csv')
-            elif run is not None:
-                run[split_name + "/data/label-csv"].upload('labels_' + str(config['name']) + '.csv') 
-                run[split_name + "/data/gradient-csv"].upload('gradients_' + str(config['name']) + '.csv') 
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/final_perecentage'] = run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/percentage'].fetch_values().mean().value
+                    percentage_all += run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/percentage'].fetch_values().mean().value
+                
+                if trained and run is not None:
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelT-csv"].upload('labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradientT-csv"].upload('gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
+                elif run is not None:
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/label-csv"].upload('labels_' + str(config['name']) + '_' + str(label_strat) +  '.csv') 
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradient-csv"].upload('gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv') 
 
-        if run is not None:
-            run['final_percentage_all'] = percentage_all / len(config['anno_json'])
-            print('Final Percentage: ' + str(percentage_all / len(config['anno_json'])) + '%')
+            #if run is not None:
+            #    run['label_attack' + '/' + str(label_strat) + '/' + 'final_percentage_all'] = percentage_all / len(config['anno_json'])
+            #    print('Final Percentage: ' + str(percentage_all / len(config['anno_json'])) + '%')
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='./configs/deepconvlstm/wear_loso.yaml')
+    parser.add_argument('--config', default='./configs/leakage/wear_loso_tiny.yaml')
     parser.add_argument('--eval_type', default='loso')
-    parser.add_argument('--neptune', default=False, type=bool)
+    parser.add_argument('--neptune', default=True, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
     parser.add_argument('--seed', default=1, type=int)       
-    parser.add_argument('--ckpt-freq', default=100, type=int)
     parser.add_argument('--gpu', default='cuda:0', type=str)
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat', default='llbg', type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'iDLG', 'analytic', 'yin', 'wainakh-simple', 'wainakh-whitebox', 'random', 'gcd', 'bias-corrected', 'iRLG'], type=str)
     parser.add_argument('--resume', default='', type=str)
-    parser.add_argument('--iterations', default='1', type=str)
-    parser.add_argument('--dataset', default='wear', type=str)
     parser.add_argument('--trained', default=False, type=bool)
+    parser.add_argument('--balanced', default=True, type=bool)
     args = parser.parse_args()
     
     leakage = Leakage()  
