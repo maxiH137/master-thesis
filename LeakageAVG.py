@@ -138,7 +138,8 @@ class Leakage():
                 elif args.eval_type == 'loso':
                     name = 'sbj_' + str(i)
                 config['dataset']['json_anno'] = anno_split
-                    
+                if config['name'] == 'tadtr':
+                    config['dataset']['json_info'] = config['info_json'][i]
             
                 split_name = config['dataset']['json_anno'].split('/')[-1].split('.')[0]
                 # load train and val inertial data
@@ -161,7 +162,9 @@ class Leakage():
                 train_loader = DataLoader(train_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
-                
+                train_loader.name = 'train'
+                val_loader.name = 'val'
+                                
                 if 'tinyhar' in config['name'] and trained:
                     args.resume = 'saved_models/' + config['dataset_name'] + f'/tinyhar/epoch_100_loso_sbj_{i}.pth.tar'
                 if 'deepconvlstm' in config['name'] and trained:
@@ -259,9 +262,18 @@ class Leakage():
 
                 # This is the attacker:
                 #cfg_attack = breaching.get_attack_config("invertinggradients")
+                cfg_case = breaching.get_case_config('4_fedavg_small_scale_har')
                 cfg_attack = breaching.get_attack_config(args.attack)
                 cfg_attack['optim']['max_iterations'] = int(config['attack']['iterations'])
                 cfg_attack['label_strategy'] = label_strat
+                
+                
+                #model_br, loss_fn_br = breaching.cases.construct_model(breaching.config.case.model, breaching.cfg.case.data, False)
+                server_br = breaching.cases.construct_server(model, loss_fn, cfg_case, setup)
+                model = server_br.vet_model(model)
+
+                # Instantiate user and attacker
+                user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=train_dataset)
                 
                 if args.neptune:
                     log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
@@ -359,6 +371,18 @@ class Leakage():
                             metadata=dict(num_data_points=config['loader']['train_batch_size'], labels=None, local_hyperparams=None,),
                         )
                     ]
+                    
+                    # Summarize startup:
+                    breaching.utils.overview(server_br, user, attacker)
+
+                    # Simulate a simple FL protocol
+                    shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
+
+                    # Run an attack using only payload information and shared data
+                    reconstructed_user_data, stats = attacker.reconstruct(payloads, shared_user_data, server_br.secrets, dryrun=False)
+
+                    # How good is the reconstruction?
+                    #metrics = breaching.analysis.report(reconstructed_user_data, true_user_data, payloads, model, cfg_case=cfg_case, setup=setup)
                     
                     # Attack:
                     reconstructed_user_data, stats = attacker.reconstruct(server_payload, shared_data, {}, dryrun=False)
@@ -498,7 +522,7 @@ if __name__ == '__main__':
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
     parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'iDLG', 'analytic', 'yin', 'wainakh-simple', 'wainakh-whitebox', 'random', 'gcd', 'bias-corrected', 'iRLG'], type=str)
     parser.add_argument('--resume', default='', type=str)
-    parser.add_argument('--trained', default=True, type=bool)
+    parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--balanced', default=True, type=bool)
     args = parser.parse_args()
     
