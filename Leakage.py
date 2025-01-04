@@ -32,6 +32,7 @@ from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_s
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
 from Unbalanced_Sampler import UnbalancedSampler
+from Defense_Sampler import DefenseSampler
 from DPrivacy import DPrivacy
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from neptune.types import File
@@ -155,12 +156,14 @@ class Leakage():
                 test_dataset = InertialDataset(val_data, config['dataset']['window_size'], config['dataset']['window_overlap'])
 
                 # define dataloaders
-                unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes'] - 1), random.randint(0, config['dataset']['num_classes'] - 1))
+                unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes']), random.randint(0, config['dataset']['num_classes']))
+                defense_sampler = DefenseSampler(test_dataset, random.randint(0, config['dataset']['num_classes']))
                 config['init_rand_seed'] = args.seed
                 rng_generator = fix_random_seed(config['init_rand_seed'], include_cuda=True) 
                 train_loader = DataLoader(train_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                defense_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=defense_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 
                 if 'tinyhar' in config['name'] and trained:
                     args.resume = 'saved_models/' + config['dataset_name'] + f'/tinyhar/epoch_100_loso_sbj_{i}.pth.tar'
@@ -290,6 +293,7 @@ class Leakage():
 
                 # LOAD DATA
                 loader = val_loader if args.balanced else unbalanced_loader
+                loader = defense_loader if args.defenseLoader else loader
                 
                 recovered_labels_all = []
                 batchLabels_all = []
@@ -496,10 +500,11 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'iDLG', 'analytic', 'yin', 'wainakh-simple', 'wainakh-whitebox', 'random', 'gcd', 'bias-corrected', 'iRLG'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
-    parser.add_argument('--trained', default=True, type=bool)
-    parser.add_argument('--balanced', default=True, type=bool)
+    parser.add_argument('--trained', default=False, type=bool)
+    parser.add_argument('--balanced', default=False, type=bool)
+    parser.add_argument('--defenseLoader', default=True, type=bool)
     args = parser.parse_args()
     
     leakage = Leakage()  

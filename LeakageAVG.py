@@ -198,10 +198,10 @@ class Leakage():
                     
                 if 'tinyhar' in config['name']:
                     model = TinyHAR((config['loader']['train_batch_size'], 1, train_dataset.window_size, config['dataset']['input_dim']), config['dataset']['num_classes'] + 1, 
-                                    config['model']['conv_kernels'], 
-                                    config['model']['conv_layers'], 
-                                    config['model']['conv_kernel_size'], 
-                                    dropout=config['model']['dropout'], feature_extract=config['model']['feature_extract'])
+                                     config['model']['conv_kernels'], 
+                                     config['model']['conv_layers'], 
+                                     config['model']['conv_kernel_size'], 
+                                     dropout=config['model']['dropout'], feature_extract=config['model']['feature_extract'])
                     
                     if args.resume and trained:
                         if os.path.isfile(os.getcwd() + '\\' + args.resume):
@@ -219,7 +219,7 @@ class Leakage():
                 
                 
                 if config['name'] == 'ResNet':
-                    model = torchvision.models.resnet152(pretrained=trained)
+                    model = torchvision.models.resnet18(pretrained=trained)
                     model.conv1 = nn.Conv2d(1, 
                                             model.conv1.out_channels, 
                                             kernel_size = model.conv1.kernel_size, 
@@ -228,7 +228,7 @@ class Leakage():
                                             bias = model.conv1.bias)
                     
                     model.fc = nn.Linear(model.fc.in_features, config['dataset']['num_classes'] + 1) 
-                    
+                    model.name = 'ResNet'
                     model = init_weights(model, config['train_cfg']['weight_init'])
                     
                 model.eval()
@@ -261,8 +261,8 @@ class Leakage():
                             writer.writerow(grads)
 
                 # This is the attacker:
-                #cfg_attack = breaching.get_attack_config("invertinggradients")
-                cfg_case = breaching.get_case_config('4_fedavg_small_scale_har')
+                cfg_case = breaching.get_case_config('4_fedavg_small_scale_har') # user with local_updates
+                #cfg_case = breaching.get_case_config('8_industry_scale_fl_har') #  multiuser_aggregate
                 cfg_attack = breaching.get_attack_config(args.attack)
                 cfg_attack['optim']['max_iterations'] = int(config['attack']['iterations'])
                 cfg_attack['label_strategy'] = label_strat
@@ -274,7 +274,7 @@ class Leakage():
 
                 # Instantiate user and attacker
                 user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=train_dataset)
-                
+                 
                 if args.neptune:
                     log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
                     sys.stdout = Logger(os.path.join(log_dir_atk, 'log.txt'))
@@ -294,209 +294,104 @@ class Leakage():
                 metadata.classes = config['dataset']['num_classes'] + 1
                 metadata['task'] = 'classification'
                 
-                server_payload = [
-                    dict(
-                        parameters=[p for p in model.parameters()], buffers=[b for b in model.buffers()], metadata=metadata
-                    )
-                ]
 
                 # LOAD DATA
                 loader = val_loader if args.balanced else unbalanced_loader
                 
                 recovered_labels_all = []
                 batchLabels_all = []
-                for _, (inputs, targets) in enumerate(loader, 0):
                     
-                    if 'deepconvlstm' in config['name']:
-                        val_data = inputs
-                        labels = targets
-                        batchLabels = targets
-                        
-                        if(val_data.shape[0] != config['loader']['train_batch_size'] or 
-                        val_data.shape[1] != 50 or 
-                        val_data.shape[2] != config['dataset']['input_dim']):
-                            break
+                # Summarize startup:
+                breaching.utils.overview(server_br, user, attacker)
 
-                        
-                    if 'tinyhar' in config['name']:
-                        val_data = inputs
-                        labels = targets
-                        batchLabels = targets
-                        
-                        if(val_data.shape[0] != config['loader']['train_batch_size'] or 
-                        val_data.shape[1] != 50 or 
-                        val_data.shape[2] != config['dataset']['input_dim']):
-                            break
+                # Simulate a simple FL protocol
+                shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
 
-                    
-                    if config['name'] == 'ResNet':
-                        val_data = inputs
-                        labels = targets
-                        batchLabels = targets
-                        onedimdata = val_data
-                        
-                        if(val_data.shape[0] != config['loader']['train_batch_size'] or 
-                        val_data.shape[1] != 50 or 
-                        val_data.shape[2] != config['dataset']['input_dim']):
-                            break
-                    
-                    
-                    # Normalize data
-                    onedimdata = val_data.unsqueeze(1)
-                    onedimdata = (onedimdata - onedimdata.min()) / (onedimdata.max() - onedimdata.min())
-                    
+                # Run an attack using only payload information and shared data
+                reconstructed_user_data, stats = attacker.reconstruct(payloads, shared_user_data, server_br.secrets, dryrun=False)
 
-                    # User-side computation:
-                    #loss = loss_fn(model(datapoint[None, ...]), labels)
-                    
-                    output = model(onedimdata)
-                    loss = loss_fn(output, labels)
-                    
-                    gradients=torch.autograd.grad(loss, model.parameters())
-                    
-                    # Access gradients
-                    #for (name, _), grad in zip(model.named_parameters(), gradients):
-                        #print(f"Gradient of {name}: {grad}")
-                    grad_bias = gradients[-1]
-                    grad_weight = gradients[-2]
-                    
-                    if run is not None:
-                        run['label_attack' + '/' + str(label_strat) + '/gradients/weight'].log(grad_weight)
-                        run['label_attack' + '/' + str(label_strat) + '/gradients/bias'].log(grad_bias)
-                                    
-                    shared_data = [
-                        dict(
-                            gradients=gradients,
-                            buffers=None,
-                            metadata=dict(num_data_points=config['loader']['train_batch_size'], labels=None, local_hyperparams=None,),
-                        )
-                    ]
-                    
-                    # Summarize startup:
-                    breaching.utils.overview(server_br, user, attacker)
+                # How good is the reconstruction?
+                metrics = breaching.analysis.report(reconstructed_user_data, true_user_data, payloads, model, cfg_case=cfg_case, setup=setup, order_batch=False)
+                
+                
+                recovered_labels = reconstructed_user_data['labels'].sort()[0]
+                true_user_data['labels'] = true_user_data['labels'].sort()[0]
 
-                    # Simulate a simple FL protocol
-                    shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
-
-                    # Run an attack using only payload information and shared data
-                    reconstructed_user_data, stats = attacker.reconstruct(payloads, shared_user_data, server_br.secrets, dryrun=False)
-
-                    # How good is the reconstruction?
-                    #metrics = breaching.analysis.report(reconstructed_user_data, true_user_data, payloads, model, cfg_case=cfg_case, setup=setup)
+                reconstructed_user_data = reconstructed_user_data['data']
+                reconstructed_user_data = (reconstructed_user_data - reconstructed_user_data.min()) / (reconstructed_user_data.max() - reconstructed_user_data.min())
+                
                     
-                    # Attack:
-                    reconstructed_user_data, stats = attacker.reconstruct(server_payload, shared_data, {}, dryrun=False)
-                    
-                    recovered_labels = reconstructed_user_data['labels']
-                    recovered_labels = recovered_labels.sort()[0]
-                    batchLabels = batchLabels.sort()[0]
+                correct = 0
+                wrong = 0
+                predicted_labels = recovered_labels.clone()
 
-                    reconstructed_user_data = reconstructed_user_data['data']
-                    reconstructed_user_data = (reconstructed_user_data - reconstructed_user_data.min()) / (reconstructed_user_data.max() - reconstructed_user_data.min())
-                    
+                for label in true_user_data['labels']:
+                    if label in predicted_labels:
+                        correct += 1
+                        index = np.where(predicted_labels == label)[0][0]
 
-                    OriginalData = onedimdata.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
-                    ReconstructedData = reconstructed_user_data.squeeze(1).reshape(50 * config['loader']['train_batch_size'], config['dataset']['input_dim'])
-                    
-                    gradient = torch.round(shared_data[0]["gradients"][-1], decimals=6)
-                    
-                    appendGradient = {f'G{i}': [gradient[i].item()] for i in range(config['dataset']['num_classes'] + 1)}
-                    appendGradient = pd.DataFrame(appendGradient)
-                    
-                    appendData = pd.DataFrame({
-                        'GT': batchLabels.numpy(),
-                        'Pred': recovered_labels.numpy(),
-                        'Sbj': val_sbjs[0]
-                    })
-
-                    # Append to CSV without writing the header again
-                    if(not trained):
-                        appendData.to_csv('CSV/' +'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False)
-                    else: 
-                        appendData.to_csv('CSV/' +'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False)
-
-                    if(not trained):
-                        appendGradient.to_csv('CSV/' +'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                        # Delete the first occurrence
+                        predicted_labels = np.delete(predicted_labels, index)
                     else:
-                        appendGradient.to_csv('CSV/' +'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                        wrong +=1
                         
-                        
-                    correct = 0
-                    wrong = 0
-                    predicted_labels = recovered_labels.clone()
-
-                    for label in batchLabels:
-                        if label in predicted_labels:
-                            correct += 1
-                            index = np.where(predicted_labels == label)[0][0]
-
-                            # Delete the first occurrence
-                            predicted_labels = np.delete(predicted_labels, index)
-                        else:
-                            wrong +=1
-                            
-                    # Calculate Label Leakage Accuracy for label existence
-                    unique_labelsGT = torch.unique(batchLabels)
-                    unique_labelsPD = torch.unique(recovered_labels)
-                    leAcc = 0
-                    leAccWrong = 0  
-                    for label in unique_labelsPD:
-                        if label in unique_labelsGT:
-                            leAcc += 1
-                        elif label not in unique_labelsGT:
-                            leAccWrong += 1
-                    leAcc = leAcc / unique_labelsGT.size()[0] # Label Existence Accuracy
-                    leAccWrong = leAccWrong / unique_labelsPD.size()[0] # Label Existence Prediction that were predicted, but not actually in the batch
-                    
-                    #lnacc_sklearn = accuracy_score(batchLabels, recovered_labels)
-                    
-                    lnAcc = int((batchLabels.size()[0] - wrong) / batchLabels.size()[0] * 100)
+                # Calculate Label Leakage Accuracy for label existence
+                unique_labelsGT = torch.unique(true_user_data['labels'])
+                unique_labelsPD = torch.unique(recovered_labels)
+                leAcc = 0
+                leAccWrong = 0  
+                for label in unique_labelsPD:
+                    if label in unique_labelsGT:
+                        leAcc += 1
+                    elif label not in unique_labelsGT:
+                        leAccWrong += 1
+                leAcc = leAcc / unique_labelsGT.size()[0] # Label Existence Accuracy
+                leAccWrong = leAccWrong / unique_labelsPD.size()[0] # Label Existence Prediction that were predicted, but not actually in the batch
+                
+                
+                lnAcc = int((true_user_data['labels'].size()[0] - wrong) / true_user_data['labels'].size()[0] * 100)
 
 
-                    block2 = ''
-                    block2 += 'Correct Labels: ' + str(correct) + '\n' 
-                    block2 += 'Wrong Labels: ' + str(wrong) + '\n' 
-                    block2 += 'LnAcc: ' + str(lnAcc) + '%' + '\n'
-                    block2 += '\n'
+                block2 = ''
+                block2 += 'Correct Labels: ' + str(correct) + '\n' 
+                block2 += 'Wrong Labels: ' + str(wrong) + '\n' 
+                block2 += 'LnAcc: ' + str(lnAcc) + '%' + '\n'
+                block2 += 'Metrics Acc: ' + str(metrics['label_acc']) + '\n'
+                block2 += '\n'
 
-                    block1 = '\nLABEL LEAKAGE RESULTS:'
-                    print('\n'.join([block1, block2]))
-                    
-                    # submit final values to neptune 
-                    if run is not None:
-                        transform = T.ToPILImage()
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"leAcc": leAcc})
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lnAcc": lnAcc})
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/original"].append(transform(OriginalData))
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/reconstruction"].append(transform(ReconstructedData))
-                    
-                    recovered_labels_all.append(recovered_labels)
-                    batchLabels_all.append(batchLabels) 
+                block1 = '\nLABEL LEAKAGE RESULTS:'
+                print('\n'.join([block1, block2]))
+                
+                # submit final values to neptune 
+                if run is not None:
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"leAcc": leAcc})
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lnAcc": lnAcc})
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lMetrics Acc": str(metrics['label_acc'])})
+                
+                recovered_labels_all.append(recovered_labels)
+                batchLabels_all.append(true_user_data['labels']) 
                     
                 batchLabels_all = torch.cat(batchLabels_all)
                 recovered_labels_all = torch.cat(recovered_labels_all)
-                conf_mat = confusion_matrix(batchLabels_all, recovered_labels_all, normalize='true', labels=range(len(config['labels'])))
-                v_acc = conf_mat.diagonal()/conf_mat.sum(axis=1)
-                v_prec = precision_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
-                v_rec = recall_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
-                v_f1 = f1_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
+                #conf_mat = confusion_matrix(batchLabels_all, recovered_labels_all, normalize='true', labels=range(len(config['labels'])))
+                #v_acc = conf_mat.diagonal()/conf_mat.sum(axis=1)
+                #v_prec = precision_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
+                #v_rec = recall_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
+                #v_f1 = f1_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
                 
                 # save final raw confusion matrix
                 _, ax = plt.subplots(figsize=(15, 15), layout="constrained")
                 ax.set_title('Confusion Matrix: ' + str(label_strat) + ' ' + split_name)
-                conf_disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=config['labels']) 
-                conf_disp.plot(ax=ax, xticks_rotation='vertical', colorbar=False)
-                #plt.savefig(os.path.join(log_dir, 'all_raw.png'))
+                #conf_disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=config['labels']) 
+                #conf_disp.plot(ax=ax, xticks_rotation='vertical', colorbar=False)
                 if run is not None:
-                    #run['conf_matrices'].append(File(os.path.join(log_dir, 'all_raw.png')), name='all')
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + '/conf_matrices'].append(File.as_image(plt.gcf()), name='all')
                 plt.close()
 
-
-                
-                if run is not None:
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/final_lnAcc'] = run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
-                    lnAcc_all += run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
+            
+                #if run is not None:
+                    #run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/final_lnAcc'] = run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
+                    #lnAcc_all += run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
                 
                 if trained and run is not None:
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelT-csv"].upload('CSV/labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
@@ -505,9 +400,6 @@ class Leakage():
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/label-csv"].upload('CSV/labels_' + str(config['name']) + '_' + str(label_strat) +  '.csv') 
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradient-csv"].upload('CSV/gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv') 
 
-            #if run is not None:
-            #    run['label_attack' + '/' + str(label_strat) + '/' + 'final_percentage_all'] = percentage_all / len(config['anno_json'])
-            #    print('Final Percentage: ' + str(percentage_all / len(config['anno_json'])) + '%')
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -520,7 +412,7 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'iDLG', 'analytic', 'yin', 'wainakh-simple', 'wainakh-whitebox', 'random', 'gcd', 'bias-corrected', 'iRLG'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--balanced', default=True, type=bool)
