@@ -5,18 +5,37 @@
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:2
 
-python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune False --label_strat gcd --attack _default_optimization_attack --balanced False
+#FEDSGD
+python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --label_strat gcd --attack _default_optimization_attack --balanced False
+python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
 
-python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --label_strat gcd --attack _default_optimization_attack --balanced False
+python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --label_strat gcd --attack _default_optimization_attack --balanced False
+python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
 
-python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune False --label_strat gcd --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --label_strat gcd --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
 
-python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --label_strat gcd --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --label_strat gcd --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+
+
+#FEDAVG
+python LeakageAVG.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+
+python LeakageAVG.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+
+python LeakageAVG.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+
+python LeakageAVG.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+
+python LeakageAVG.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+
+python LeakageAVG.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+
+python LeakageAVG.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+
+python LeakageAVG.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
