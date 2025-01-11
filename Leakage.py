@@ -292,8 +292,12 @@ class Leakage():
                 ]
 
                 # LOAD DATA
-                loader = val_loader if args.balanced else unbalanced_loader
-                loader = defense_loader if args.defenseLoader else loader
+                if args.sampling == 'balanced':
+                    loader = val_loader 
+                elif args.sampling == 'unbalanced':
+                    loader = unbalanced_loader
+                elif args.sampling == 'defense':
+                    loader = defense_loader
                 
                 recovered_labels_all = []
                 batchLabels_all = []
@@ -503,8 +507,7 @@ if __name__ == '__main__':
     parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=False, type=bool)
-    parser.add_argument('--balanced', default=False, type=bool)
-    parser.add_argument('--defenseLoader', default=True, type=bool)
+    parser.add_argument('--sampling', default='balanced', choices=['defense', 'balanced', 'unbalanced'], type=str)
     args = parser.parse_args()
     
     leakage = Leakage()  
