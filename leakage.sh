@@ -6,21 +6,21 @@
 #SBATCH --gres=gpu:2
 
 #FEDSGD
-python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling balanced
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling balanced
 
-python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling balanced
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced False
+python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling balanced
 
-python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wear_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling unbalanced
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wetlab_loso_deep.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling unbalanced
 
-python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wear_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling unbalanced
 
-python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --balanced True
+python Leakage.py --config ./configs/leakage/wetlab_loso_tiny.yaml --seed 1 --eval_type loso --trained True --neptune True --attack _default_optimization_attack --sampling unbalanced
 
 
 #FEDAVG

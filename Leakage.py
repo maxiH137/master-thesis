@@ -33,7 +33,7 @@ from torch.utils.data import DataLoader
 from opacus import layers, optimizers
 from Unbalanced_Sampler import UnbalancedSampler
 from Defense_Sampler import DefenseSampler
-from DPrivacy import DPrivacy
+from DPrivacy import DPrivacy, BreachDP
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from neptune.types import File
 
@@ -75,6 +75,7 @@ class Leakage():
         self.run = run
         self.config = config
         self.dpri = DPrivacy(multiplier=0.1, clip=0.1)
+        self.breachingDP = BreachDP(local_diff_privacy={"gradient_noise": 0.1, "input_noise": 0.1, "distribution": "gaussian", "per_example_clipping": 0.1}, setup=dict(device=torch.device("cpu"), dtype=torch.float))
     
     def main(self, args):
         
@@ -110,7 +111,7 @@ class Leakage():
             run['args/trained'] = args.trained
             run['args/model'] = config['name']
             run['args/dataset'] = config['dataset_name']
-            run['args/balanced'] = args.balanced
+            run['args/samlping'] = args.sampling
             run['args/datapoints'] = config['loader']['train_batch_size']
             run['args/classes'] = config['dataset']['num_classes']
             run['args/label_strat_array'] = args.label_strat_array
@@ -231,7 +232,7 @@ class Leakage():
                     
                     model = init_weights(model, config['train_cfg']['weight_init'])
                     
-                model.eval()
+                model.train()
                     
                 loss_fn = torch.nn.CrossEntropyLoss()
                 
@@ -348,7 +349,12 @@ class Leakage():
                     output = model(onedimdata)
                     loss = loss_fn(output, labels)
                     
-                    gradients=torch.autograd.grad(loss, model.parameters())
+                    gradients = torch.autograd.grad(loss, model.parameters())
+                    gradients_noise = self.breachingDP.applyNoise([g.clone() for g in gradients])
+                    #gradients = self.breachingDP.clampGradient({'inputs': onedimdata, 'labels': labels}, config['loader']['train_batch_size'])
+                    gradients_clipped = self.breachingDP._clip_list_of_grad_([g.clone() for g in gradients_noise])
+                    
+                    #gradients = gradients_clipped
                     
                     # Access gradients
                     #for (name, _), grad in zip(model.named_parameters(), gradients):
@@ -497,14 +503,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/leakage/wear_loso_deep.yaml')
     parser.add_argument('--eval_type', default='loso')
-    parser.add_argument('--neptune', default=False, type=bool)
+    parser.add_argument('--neptune', default=True, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
     parser.add_argument('--seed', default=1, type=int)       
     parser.add_argument('--gpu', default='cuda:0', type=str)
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--sampling', default='balanced', choices=['defense', 'balanced', 'unbalanced'], type=str)

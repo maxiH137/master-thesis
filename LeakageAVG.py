@@ -231,7 +231,7 @@ class Leakage():
                     model.name = 'ResNet'
                     model = init_weights(model, config['train_cfg']['weight_init'])
                     
-                model.eval()
+                model.train()
                     
                 loss_fn = torch.nn.CrossEntropyLoss()
                 
@@ -412,7 +412,7 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbg', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--balanced', default=True, type=bool)
