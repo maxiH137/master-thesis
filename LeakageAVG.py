@@ -31,7 +31,7 @@ from models.TinyHAR import TinyHAR
 from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_seed, InertialDataset
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
-from Unbalanced_Sampler import UnbalancedSampler
+from Samplers import UnbalancedSampler, BalancedSampler
 from DPrivacy import DPrivacy
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from neptune.types import File

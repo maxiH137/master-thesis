@@ -31,7 +31,7 @@ from models.TinyHAR import TinyHAR
 from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_seed, InertialDataset
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
-from Unbalanced_Sampler import UnbalancedSampler
+from Samplers import UnbalancedSampler, BalancedSampler
 from Defense_Sampler import DefenseSampler
 from DPrivacy import DPrivacy, BreachDP
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
@@ -104,6 +104,8 @@ class Leakage():
         with open(os.path.join(log_dir, 'cfg.txt'), 'w') as fid:
             pprint(config, stream=fid)
             fid.flush()
+            
+        config['loader']['train_batch_size'] = args.batch_size
         
         if args.neptune:
             run['config_name'] = args.config
@@ -111,7 +113,7 @@ class Leakage():
             run['args/trained'] = args.trained
             run['args/model'] = config['name']
             run['args/dataset'] = config['dataset_name']
-            run['args/samlping'] = args.sampling
+            run['args/sampling'] = args.sampling
             run['args/datapoints'] = config['loader']['train_batch_size']
             run['args/classes'] = config['dataset']['num_classes']
             run['args/label_strat_array'] = args.label_strat_array
@@ -158,12 +160,16 @@ class Leakage():
 
                 # define dataloaders
                 unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes']), random.randint(0, config['dataset']['num_classes']))
+                balanced_sampler = BalancedSampler(test_dataset)
                 defense_sampler = DefenseSampler(test_dataset, random.randint(0, config['dataset']['num_classes']))
+                
                 config['init_rand_seed'] = args.seed
+                
                 rng_generator = fix_random_seed(config['init_rand_seed'], include_cuda=True) 
                 train_loader = DataLoader(train_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                balanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=balanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 defense_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=defense_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 
                 if 'tinyhar' in config['name'] and trained:
@@ -293,8 +299,10 @@ class Leakage():
                 ]
 
                 # LOAD DATA
-                if args.sampling == 'balanced':
+                if args.sampling == 'shuffle':
                     loader = val_loader 
+                elif args.sampling == 'balanced':
+                    loader = balanced_loader    
                 elif args.sampling == 'unbalanced':
                     loader = unbalanced_loader
                 elif args.sampling == 'defense':
@@ -302,7 +310,7 @@ class Leakage():
                 
                 recovered_labels_all = []
                 batchLabels_all = []
-                for _, (inputs, targets) in enumerate(loader, 0):
+                for i, (inputs, targets) in enumerate(loader, 0):
                     
                     if 'deepconvlstm' in config['name']:
                         val_data = inputs
@@ -349,10 +357,21 @@ class Leakage():
                     output = model(onedimdata)
                     loss = loss_fn(output, labels)
                     
+                    unique_labels, counts = torch.unique(labels, return_counts=True)
+                    label_counts = dict(zip(unique_labels.tolist(), counts.tolist()))
+
+                     # Write label counts to CSV
+                    with open('CSV/label_counts.csv', 'a', newline='') as file:
+                        writer = csv.writer(file)
+                        writer.writerow(['Label', 'Count'])
+                        for label, count in label_counts.items():
+                            writer.writerow([label, count])
+                    
+                    
                     gradients = torch.autograd.grad(loss, model.parameters())
-                    gradients_noise = self.breachingDP.applyNoise([g.clone() for g in gradients])
+                    #gradients_noise = self.breachingDP.applyNoise([g.clone() for g in gradients])
                     #gradients = self.breachingDP.clampGradient({'inputs': onedimdata, 'labels': labels}, config['loader']['train_batch_size'])
-                    gradients_clipped = self.breachingDP._clip_list_of_grad_([g.clone() for g in gradients_noise])
+                    #gradients_clipped = self.breachingDP._clip_list_of_grad_([g.clone() for g in gradients_noise])
                     
                     #gradients = gradients_clipped
                     
@@ -362,9 +381,6 @@ class Leakage():
                     grad_bias = gradients[-1]
                     grad_weight = gradients[-2]
                     
-                    if run is not None:
-                        run['label_attack' + '/' + str(label_strat) + '/gradients/weight'].log(grad_weight)
-                        run['label_attack' + '/' + str(label_strat) + '/gradients/bias'].log(grad_bias)
                                     
                     shared_data = [
                         dict(
@@ -396,7 +412,7 @@ class Leakage():
                     appendData = pd.DataFrame({
                         'GT': batchLabels.numpy(),
                         'Pred': recovered_labels.numpy(),
-                        'Sbj': val_sbjs[0]
+                        'Sbj': split_name
                     })
 
                     # Append to CSV without writing the header again
@@ -457,8 +473,8 @@ class Leakage():
                         transform = T.ToPILImage()
                         run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"leAcc": leAcc})
                         run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lnAcc": lnAcc})
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/original"].append(transform(OriginalData))
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/reconstruction"].append(transform(ReconstructedData))
+                        #run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/original"].append(transform(OriginalData))
+                        #run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/images/reconstruction"].append(transform(ReconstructedData))
                     
                     recovered_labels_all.append(recovered_labels)
                     batchLabels_all.append(batchLabels) 
@@ -495,6 +511,9 @@ class Leakage():
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/label-csv"].upload('CSV/labels_' + str(config['name']) + '_' + str(label_strat) +  '.csv') 
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradient-csv"].upload('CSV/gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv') 
 
+                if run is not None:
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelDistribution"].upload('CSV/label_counts.csv')
+
             #if run is not None:
             #    run['label_attack' + '/' + str(label_strat) + '/' + 'final_percentage_all'] = percentage_all / len(config['anno_json'])
             #    print('Final Percentage: ' + str(percentage_all / len(config['anno_json'])) + '%')
@@ -503,17 +522,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/leakage/wear_loso_deep.yaml')
     parser.add_argument('--eval_type', default='loso')
-    parser.add_argument('--neptune', default=True, type=bool)
+    parser.add_argument('--neptune', default=False, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
     parser.add_argument('--seed', default=1, type=int)       
     parser.add_argument('--gpu', default='cuda:0', type=str)
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'yin', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
+    parser.add_argument('--batch_size', default=10, type=int)
     parser.add_argument('--trained', default=False, type=bool)
-    parser.add_argument('--sampling', default='balanced', choices=['defense', 'balanced', 'unbalanced'], type=str)
+    parser.add_argument('--sampling', default='shuffle', choices=['defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
     args = parser.parse_args()
     
     leakage = Leakage()  
