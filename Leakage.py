@@ -501,8 +501,12 @@ class Leakage():
 
                 
                 if run is not None:
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/final_lnAcc'] = run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
-                    lnAcc_all += run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
+                    try:
+                        mean_ln = run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/final_lnAcc'] = mean_ln
+                        lnAcc_all += mean_ln
+                    except:
+                        print('Mean lnAcc not found')
                 
                 if trained and run is not None:
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelT-csv"].upload('CSV/labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
@@ -513,6 +517,8 @@ class Leakage():
 
                 if run is not None:
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelDistribution"].upload('CSV/label_counts.csv')
+                
+                #run.wait()
 
             #if run is not None:
             #    run['label_attack' + '/' + str(label_strat) + '/' + 'final_percentage_all'] = percentage_all / len(config['anno_json'])
@@ -529,9 +535,10 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'yin', 'random'], type=str)
+   # parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'ebi', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['wainakh-simple'], type=str)
     parser.add_argument('--resume', default='', type=str)
-    parser.add_argument('--batch_size', default=10, type=int)
+    parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--sampling', default='shuffle', choices=['defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
     args = parser.parse_args()
