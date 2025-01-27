@@ -63,8 +63,8 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_id', default='TAL-165', type=str)
-    parser.add_argument('--project', default='master-thesis-MH/tal', type=str)
-    parser.add_argument('--api_token', default='eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI0NTIwZWQ4Mi03NzUwLTQ0MDUtYmY2Yi1jZDJkNjQyMWY5ZDgifQ==', type=str)
+    parser.add_argument('--project', default='', type=str)
+    parser.add_argument('--api_token', default='', type=str)
     args = parser.parse_args()
     
     main(args)
