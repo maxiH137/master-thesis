@@ -5,10 +5,22 @@
 /conda/lib/site-packages/*
 !/conda/lib/site-packages/breaching/
 /conda/lib/site-packages/breaching/*
+!/conda/lib/site-packages/breaching/analysis/
+/conda/lib/site-packages/breaching/analysis/*
 !/conda/lib/site-packages/breaching/attacks/
 /conda/lib/site-packages/breaching/attacks/*
 !/conda/lib/site-packages/breaching/attacks/*.py
+!/conda/lib/site-packages/breaching/cases/
+/conda/lib/site-packages/breaching/cases/*
+!/conda/lib/site-packages/breaching/config/
+/conda/lib/site-packages/breaching/config/*
 
+/CSV/*
+
+/.neptune/*
+/data/*
+/logs/*
+/saved_models/*
 
 /libs
 /utils

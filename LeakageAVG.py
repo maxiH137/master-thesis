@@ -32,6 +32,7 @@ from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_s
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
 from Samplers import UnbalancedSampler, BalancedSampler
+from Defense_Sampler import DefenseSampler
 from DPrivacy import DPrivacy
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from neptune.types import File
@@ -42,15 +43,6 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Opt-in to the future behavior to prevent the warning
 pd.set_option('future.no_silent_downcasting', True)
-
-class data_cfg_default:
-    modality = "vision"
-    size = (1_281_167,)
-    classes = 1000
-    shape = (3, 224, 224)
-    normalize = True
-    mean = (0.485, 0.456, 0.406)
-    std = (0.229, 0.224, 0.225)
 
 class data_config_inertial:
     modality = "vision"
@@ -109,7 +101,7 @@ class Leakage():
             run['args/trained'] = args.trained
             run['args/model'] = config['name']
             run['args/dataset'] = config['dataset_name']
-            run['args/balanced'] = args.balanced
+            run['args/sampling'] = args.sampling
             run['args/datapoints'] = config['loader']['train_batch_size']
             run['args/classes'] = config['dataset']['num_classes']
             run['args/label_strat_array'] = args.label_strat_array
@@ -156,12 +148,21 @@ class Leakage():
                 test_dataset = InertialDataset(val_data, config['dataset']['window_size'], config['dataset']['window_overlap'])
 
                 # define dataloaders
-                unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes'] - 1), random.randint(0, config['dataset']['num_classes'] - 1))
+                unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes']), random.randint(0, config['dataset']['num_classes']))
+                balanced_sampler = BalancedSampler(test_dataset)
+                defense_sampler = DefenseSampler(test_dataset, random.randint(0, config['dataset']['num_classes']))
+                
                 config['init_rand_seed'] = args.seed
                 rng_generator = fix_random_seed(config['init_rand_seed'], include_cuda=True) 
                 train_loader = DataLoader(train_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                balanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=balanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                defense_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=defense_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                
+                defense_loader.name = 'defense'
+                unbalanced_loader.name = 'unbalanced' 
+                balanced_loader.name = 'balanced'
                 train_loader.name = 'train'
                 val_loader.name = 'val'
                                 
@@ -261,8 +262,19 @@ class Leakage():
                             writer.writerow(grads)
 
                 # This is the attacker:
-                cfg_case = breaching.get_case_config('4_fedavg_small_scale_har') # user with local_updates
-                #cfg_case = breaching.get_case_config('8_industry_scale_fl_har') #  multiuser_aggregate
+                #cfg_case = breaching.get_case_config('4_fedavg_small_scale_har') # user with local_updates
+                cfg_case = breaching.get_case_config('8_industry_scale_fl_har') #  multiuser_aggregate
+                
+                if args.sampling == 'shuffle':
+                    cfg_case['data']['shuffle'] = 'shuffle'
+                elif args.sampling == 'balanced':
+                    cfg_case['data']['shuffle'] = 'balanced'
+                elif args.sampling == 'unbalanced':
+                    cfg_case['data']['shuffle'] = 'unbalanced'
+                elif args.sampling == 'sequential':
+                    cfg_case['data']['shuffle'] = 'sequential'
+                
+                
                 cfg_attack = breaching.get_attack_config(args.attack)
                 cfg_attack['optim']['max_iterations'] = int(config['attack']['iterations'])
                 cfg_attack['label_strategy'] = label_strat
@@ -273,7 +285,7 @@ class Leakage():
                 model = server_br.vet_model(model)
 
                 # Instantiate user and attacker
-                user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=train_dataset)
+                user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=test_dataset)
                  
                 if args.neptune:
                     log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
@@ -294,9 +306,6 @@ class Leakage():
                 metadata.classes = config['dataset']['num_classes'] + 1
                 metadata['task'] = 'classification'
                 
-
-                # LOAD DATA
-                loader = val_loader if args.balanced else unbalanced_loader
                 
                 recovered_labels_all = []
                 batchLabels_all = []
@@ -306,7 +315,10 @@ class Leakage():
 
                 # Simulate a simple FL protocol
                 shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
-
+                
+                
+                #Subset = torch.utils.data.Subset(train_dataset, shared_user_data['indices'])
+                
                 # Run an attack using only payload information and shared data
                 reconstructed_user_data, stats = attacker.reconstruct(payloads, shared_user_data, server_br.secrets, dryrun=False)
 
@@ -373,17 +385,11 @@ class Leakage():
                     
                 batchLabels_all = torch.cat(batchLabels_all)
                 recovered_labels_all = torch.cat(recovered_labels_all)
-                #conf_mat = confusion_matrix(batchLabels_all, recovered_labels_all, normalize='true', labels=range(len(config['labels'])))
-                #v_acc = conf_mat.diagonal()/conf_mat.sum(axis=1)
-                #v_prec = precision_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
-                #v_rec = recall_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
-                #v_f1 = f1_score(batchLabels_all, recovered_labels_all, average=None, zero_division=1, labels=range(len(config['labels'])))
                 
                 # save final raw confusion matrix
                 _, ax = plt.subplots(figsize=(15, 15), layout="constrained")
                 ax.set_title('Confusion Matrix: ' + str(label_strat) + ' ' + split_name)
-                #conf_disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=config['labels']) 
-                #conf_disp.plot(ax=ax, xticks_rotation='vertical', colorbar=False)
+                
                 if run is not None:
                     run['label_attack' + '/' + str(label_strat) + '/' + split_name + '/conf_matrices'].append(File.as_image(plt.gcf()), name='all')
                 plt.close()
@@ -415,7 +421,7 @@ if __name__ == '__main__':
     parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=False, type=bool)
-    parser.add_argument('--balanced', default=True, type=bool)
+    parser.add_argument('--sampling', default='shuffle', choices=['defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
     args = parser.parse_args()
     
     leakage = Leakage()  

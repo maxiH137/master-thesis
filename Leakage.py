@@ -171,6 +171,7 @@ class Leakage():
                 unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 balanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=balanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 defense_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=defense_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                seq_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=False, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                 
                 if 'tinyhar' in config['name'] and trained:
                     args.resume = 'saved_models/' + config['dataset_name'] + f'/tinyhar/epoch_100_loso_sbj_{i}.pth.tar'
@@ -307,6 +308,8 @@ class Leakage():
                     loader = unbalanced_loader
                 elif args.sampling == 'defense':
                     loader = defense_loader
+                elif args.sampling == 'sequential':
+                    loader = seq_loader
                 
                 recovered_labels_all = []
                 batchLabels_all = []
@@ -540,7 +543,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--trained', default=False, type=bool)
-    parser.add_argument('--sampling', default='shuffle', choices=['defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
+    parser.add_argument('--sampling', default='shuffle', choices=['sequential','defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
     args = parser.parse_args()
     
     leakage = Leakage()  
