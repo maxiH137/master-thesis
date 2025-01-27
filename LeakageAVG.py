@@ -12,29 +12,25 @@ import torchvision
 import torchvision.transforms as T
 import breaching
 import neptune
-import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import json
 import csv
 import sys
-import time
 from pprint import pprint
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.metrics import accuracy_score
 from utils.os_utils import Logger, load_config
-from libs.datasets import make_dataset, make_data_loader
 from utils.torch_utils import fix_random_seed
 from models.DeepConvLSTM import DeepConvLSTM
 from models.TinyHAR import TinyHAR
-from utils.torch_utils import init_weights, save_checkpoint, worker_init_reset_seed, InertialDataset
+from utils.torch_utils import init_weights, worker_init_reset_seed, InertialDataset
 from torch.utils.data import DataLoader
 from opacus import layers, optimizers
 from Samplers import UnbalancedSampler, BalancedSampler
 from Defense_Sampler import DefenseSampler
 from DPrivacy import DPrivacy
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from neptune.types import File
 
 import os
@@ -320,7 +316,29 @@ class Leakage():
                 #Subset = torch.utils.data.Subset(train_dataset, shared_user_data['indices'])
                 
                 # Run an attack using only payload information and shared data
-                reconstructed_user_data, stats = attacker.reconstruct(payloads, shared_user_data, server_br.secrets, dryrun=False)
+                
+                for idx, data_block in enumerate(user.dataloader):
+                    
+                    shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
+                
+                    user.num_data_points = 100
+                    user.num_data_per_local_update_step = 10
+                    user.num_local_updates = 10
+                    shared_user_data[0]['metadata']['num_data_points'] = user.num_data_points
+                    shared_user_data[0]['metadata']['local_hyperparams']['steps'] = user.num_local_updates
+                    shared_user_data[0]['metadata']['local_hyperparams']['data_per_step'] = user.num_data_per_local_update_step
+                    
+                    labels = data_block['labels']
+                    data = data_block['inputs']
+                    onedimdata = data.unsqueeze(1)
+                    
+                    output = model(onedimdata)
+                    loss = loss_fn(output, labels)
+                    
+                    gradients = torch.autograd.grad(loss, model.parameters())
+                    #shared_user_data[0]['gradients'] = gradients
+                    
+                    reconstructed_user_data, stats = attacker.reconstruct(payloads, shared_user_data, server_br.secrets, dryrun=False)
 
                 # How good is the reconstruction?
                 metrics = breaching.analysis.report(reconstructed_user_data, true_user_data, payloads, model, cfg_case=cfg_case, setup=setup, order_batch=False)
