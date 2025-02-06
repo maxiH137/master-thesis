@@ -101,6 +101,7 @@ class Leakage():
             run['args/datapoints'] = config['loader']['train_batch_size']
             run['args/classes'] = config['dataset']['num_classes']
             run['args/label_strat_array'] = args.label_strat_array
+            run['args/fedAVG'] = args.avg
         
         device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         setup = dict(device=torch.device("cpu"), dtype=torch.float)
@@ -181,8 +182,12 @@ class Leakage():
                     if args.resume and trained:
                         if os.path.isfile(os.getcwd() + '\\' + args.resume):
                             checkpoint = torch.load(args.resume, map_location = device) # loc: storage.cuda(config['device'])
-                        
+                            
+                            state_dict_untrained = model.state_dict()
+                            state_dict_untrained = {k: v.clone() for k, v in state_dict_untrained.items()}
                             model.load_state_dict(checkpoint['state_dict'])
+                            state_dict_train = model.state_dict()
+
                             opt.load_state_dict(checkpoint['optimizer'])
                             print("=> loaded checkpoint '{:s}' (epoch {:d}".format(args.resume, checkpoint['epoch']))
                             del checkpoint
@@ -237,29 +242,31 @@ class Leakage():
                     run['label_attack' + '/' + str(label_strat) + '/attack_config_name'] = args.attack
                 
                 if trained:
-                    with open('CSV/' + 'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                             writer = csv.writer(file)
                             writer.writerow(['GT', 'Pred', 'Sbj'])
 
-                    with open('CSV/' + 'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                             writer = csv.writer(file)
                             for g in range(config['dataset']['num_classes'] + 1):
                                 grads.append('G' + str(g))
                             writer.writerow(grads)
                 else:
-                    with open('CSV/' + 'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                         writer = csv.writer(file)
                         writer.writerow(['GT', 'Pred', 'Sbj'])
 
-                    with open('CSV/' + 'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                             writer = csv.writer(file)
                             for g in range(config['dataset']['num_classes'] + 1):
                                 grads.append('G' + str(g))
                             writer.writerow(grads)
 
                 # This is the attacker:
-                #cfg_case = breaching.get_case_config('4_fedavg_small_scale_har') # user with local_updates
-                cfg_case = breaching.get_case_config('8_industry_scale_fl_har') #  multiuser_aggregate
+                if args.avg == 'localU':
+                    cfg_case = breaching.get_case_config('4_fedavg_small_scale_har') # user with local_updates
+                else:
+                    cfg_case = breaching.get_case_config('8_industry_scale_fl_har') #  multiuser_aggregate
                 
                 if args.sampling == 'shuffle':
                     cfg_case['data']['shuffle'] = 'shuffle'
@@ -310,96 +317,129 @@ class Leakage():
                 breaching.utils.overview(server_br, user, attacker)
 
                 # Simulate a simple FL protocol
-                shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
-                
+                #shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
                 
                 #Subset = torch.utils.data.Subset(train_dataset, shared_user_data['indices'])
                 
                 # Run an attack using only payload information and shared data
+                if args.avg == 'multiU':
+                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(user, True) 
+                else:
+                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(user) 
+                for idx, (shared_data, payload, true_user_data) in enumerate(zip(shared_user_data, payloads, true_user_data_all)):
                 
-                for idx, data_block in enumerate(user.dataloader):
+                    shared_data = [shared_data]
+                    payload = [payload]
                     
-                    shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
+                    #shared_user_data, payloads, true_user_data = server_br.run_protocol(user) 
                 
-                    user.num_data_points = 100
-                    user.num_data_per_local_update_step = 10
-                    user.num_local_updates = 10
-                    shared_user_data[0]['metadata']['num_data_points'] = user.num_data_points
-                    shared_user_data[0]['metadata']['local_hyperparams']['steps'] = user.num_local_updates
-                    shared_user_data[0]['metadata']['local_hyperparams']['data_per_step'] = user.num_data_per_local_update_step
+                    #user.num_data_points = 100
+                    #user.num_data_per_local_update_step = 10
+                    #user.num_local_updates = 10
+                    #shared_user_data[0]['metadata']['num_data_points'] = user.num_data_points
+                    #shared_user_data[0]['metadata']['local_hyperparams']['steps'] = user.num_local_updates
+                    #shared_user_data[0]['metadata']['local_hyperparams']['data_per_step'] = user.num_data_per_local_update_step
                     
-                    labels = data_block['labels']
-                    data = data_block['inputs']
-                    onedimdata = data.unsqueeze(1)
+                    #labels = data_block['labels']
+                    #data = data_block['inputs']
+                    #onedimdata = data.unsqueeze(1)
                     
-                    output = model(onedimdata)
-                    loss = loss_fn(output, labels)
+                    #output = model(onedimdata)
+                    #loss = loss_fn(output, labels)
                     
-                    gradients = torch.autograd.grad(loss, model.parameters())
+                    #gradients = torch.autograd.grad(loss, model.parameters())
                     #shared_user_data[0]['gradients'] = gradients
+
+                    #server_payload = server_br.distribute_payload()
+                    #shared_user_data, true_user_data = user.compute_local_updates(server_payload, True)  
                     
-                    reconstructed_user_data, stats = attacker.reconstruct(payloads, shared_user_data, server_br.secrets, dryrun=False)
+                    reconstructed_user_data, stats = attacker.reconstruct(payload, shared_data, server_br.secrets, dryrun=False)
 
-                # How good is the reconstruction?
-                metrics = breaching.analysis.report(reconstructed_user_data, true_user_data, payloads, model, cfg_case=cfg_case, setup=setup, order_batch=False)
-                
-                
-                recovered_labels = reconstructed_user_data['labels'].sort()[0]
-                true_user_data['labels'] = true_user_data['labels'].sort()[0]
+                    # How good is the reconstruction?
+                    #metrics = breaching.analysis.report(reconstructed_user_data, true_user_data, payloads, model, cfg_case=cfg_case, setup=setup, order_batch=False)
+                               
+                    recovered_labels = reconstructed_user_data['labels'].sort()[0]
+                    true_user_data['labels'] = true_user_data['labels'].sort()[0]
 
-                reconstructed_user_data = reconstructed_user_data['data']
-                reconstructed_user_data = (reconstructed_user_data - reconstructed_user_data.min()) / (reconstructed_user_data.max() - reconstructed_user_data.min())
-                
+                    reconstructed_user_data = reconstructed_user_data['data']
+                    reconstructed_user_data = (reconstructed_user_data - reconstructed_user_data.min()) / (reconstructed_user_data.max() - reconstructed_user_data.min())
                     
-                correct = 0
-                wrong = 0
-                predicted_labels = recovered_labels.clone()
 
-                for label in true_user_data['labels']:
-                    if label in predicted_labels:
-                        correct += 1
-                        index = np.where(predicted_labels == label)[0][0]
+                    # Log Gradients and Labels in csv
+                    gradient = torch.round(shared_user_data[0]["gradients"][-1], decimals=6)
+                    
+                    appendGradient = {f'G{i}': [gradient[i].item()] for i in range(config['dataset']['num_classes'] + 1)}
+                    appendGradient = pd.DataFrame(appendGradient)
+                    
+                    appendData = pd.DataFrame({
+                        'GT': true_user_data['labels'].numpy(),
+                        'Pred': recovered_labels.numpy(),
+                        'Sbj': split_name,
+                        'idx': str(i)
+                    })
 
-                        # Delete the first occurrence
-                        predicted_labels = np.delete(predicted_labels, index)
+                    # Append to CSV without writing header again
+                    if(not trained):
+                        appendData.to_csv('CSV_avg_local/' + 'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                    else: 
+                        appendData.to_csv('CSV_avg_local/' + 'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+
+                    if(not trained):
+                        appendGradient.to_csv('CSV_avg_local/' + 'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
                     else:
-                        wrong +=1
+                        appendGradient.to_csv('CSV_avg_local/' + 'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
                         
-                # Calculate Label Leakage Accuracy for label existence
-                unique_labelsGT = torch.unique(true_user_data['labels'])
-                unique_labelsPD = torch.unique(recovered_labels)
-                leAcc = 0
-                leAccWrong = 0  
-                for label in unique_labelsPD:
-                    if label in unique_labelsGT:
-                        leAcc += 1
-                    elif label not in unique_labelsGT:
-                        leAccWrong += 1
-                leAcc = leAcc / unique_labelsGT.size()[0] # Label Existence Accuracy
-                leAccWrong = leAccWrong / unique_labelsPD.size()[0] # Label Existence Prediction that were predicted, but not actually in the batch
-                
-                
-                lnAcc = int((true_user_data['labels'].size()[0] - wrong) / true_user_data['labels'].size()[0] * 100)
+                        
+                    # Calculate leAcc and LnAcc
+                    correct = 0
+                    wrong = 0
+                    predicted_labels = recovered_labels.clone()
+
+                    for label in true_user_data['labels']:
+                        if label in predicted_labels:
+                            correct += 1
+                            index = np.where(predicted_labels == label)[0][0]
+
+                            # Delete the first occurrence
+                            predicted_labels = np.delete(predicted_labels, index)
+                        else:
+                            wrong +=1
+                            
+                    # Calculate Label Leakage Accuracy for label existence
+                    unique_labelsGT = torch.unique(true_user_data['labels'])
+                    unique_labelsPD = torch.unique(recovered_labels)
+                    leAcc = 0
+                    leAccWrong = 0  
+                    for label in unique_labelsPD:
+                        if label in unique_labelsGT:
+                            leAcc += 1
+                        elif label not in unique_labelsGT:
+                            leAccWrong += 1
+                    leAcc = leAcc / unique_labelsGT.size()[0] # Label Existence Accuracy
+                    leAccWrong = leAccWrong / unique_labelsPD.size()[0] # Label Existence Prediction that were predicted, but not actually in the batch
+                    
+                    
+                    lnAcc = int((true_user_data['labels'].size()[0] - wrong) / true_user_data['labels'].size()[0] * 100)
 
 
-                block2 = ''
-                block2 += 'Correct Labels: ' + str(correct) + '\n' 
-                block2 += 'Wrong Labels: ' + str(wrong) + '\n' 
-                block2 += 'LnAcc: ' + str(lnAcc) + '%' + '\n'
-                block2 += 'Metrics Acc: ' + str(metrics['label_acc']) + '\n'
-                block2 += '\n'
+                    block2 = ''
+                    block2 += 'Correct Labels: ' + str(correct) + '\n' 
+                    block2 += 'Wrong Labels: ' + str(wrong) + '\n' 
+                    block2 += 'LnAcc: ' + str(lnAcc) + '%' + '\n'
+                    #block2 += 'Metrics Acc: ' + str(metrics['label_acc']) + '\n'
+                    block2 += '\n'
 
-                block1 = '\nLABEL LEAKAGE RESULTS:'
-                print('\n'.join([block1, block2]))
-                
-                # submit final values to neptune 
-                if run is not None:
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"leAcc": leAcc})
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lnAcc": lnAcc})
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lMetrics Acc": str(metrics['label_acc'])})
-                
-                recovered_labels_all.append(recovered_labels)
-                batchLabels_all.append(true_user_data['labels']) 
+                    block1 = '\nLABEL LEAKAGE RESULTS:'
+                    print('\n'.join([block1, block2]))
+                    
+                    # submit final values to neptune 
+                    if run is not None:
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"leAcc": leAcc})
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lnAcc": lnAcc})
+                        #run['label_attack' + '/' + str(label_strat) + '/' + split_name].append({"lMetrics Acc": str(metrics['label_acc'])})
+                    
+                    recovered_labels_all.append(recovered_labels)
+                    batchLabels_all.append(true_user_data['labels']) 
                     
                 batchLabels_all = torch.cat(batchLabels_all)
                 recovered_labels_all = torch.cat(recovered_labels_all)
@@ -417,13 +457,16 @@ class Leakage():
                     #run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/final_lnAcc'] = run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
                     #lnAcc_all += run['label_attack' + '/' + str(label_strat) + '/' + split_name +'/lnAcc'].fetch_values().mean().value
                 
+                # Upload csv files to neptune
                 if trained and run is not None:
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelT-csv"].upload('CSV/labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradientT-csv"].upload('CSV/gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelT-csv"].upload('CSV_avg_local/labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradientT-csv"].upload('CSV_avg_local/gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
                 elif run is not None:
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/label-csv"].upload('CSV/labels_' + str(config['name']) + '_' + str(label_strat) +  '.csv') 
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradient-csv"].upload('CSV/gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv') 
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/label-csv"].upload('CSV_avg_local/labels_' + str(config['name']) + '_' + str(label_strat) +  '.csv') 
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradient-csv"].upload('CSV_avg_local/gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv') 
 
+                if run is not None:
+                    run.wait()
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -436,10 +479,12 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+    #parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'random'], type=str)
     parser.add_argument('--resume', default='', type=str)
-    parser.add_argument('--trained', default=False, type=bool)
-    parser.add_argument('--sampling', default='shuffle', choices=['defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
+    parser.add_argument('--trained', default=True, type=bool)
+    parser.add_argument('--avg', default='localU', choices=['localU', 'multiU'], type=str)
+    parser.add_argument('--sampling', default='shuffle', choices=['sequential', 'balanced', 'unbalanced', 'shuffle'], type=str)
     args = parser.parse_args()
     
     leakage = Leakage()  
