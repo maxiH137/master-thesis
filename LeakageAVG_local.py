@@ -288,7 +288,8 @@ class Leakage():
                 model = server_br.vet_model(model)
 
                 # Instantiate user and attacker
-                user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=test_dataset)
+                #user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=test_dataset)
+                user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=train_dataset)
                  
                 if args.neptune:
                     log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
@@ -480,7 +481,7 @@ if __name__ == '__main__':
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
     #parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'ebi','random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=True, type=bool)
     parser.add_argument('--avg', default='localU', choices=['localU', 'multiU'], type=str)
