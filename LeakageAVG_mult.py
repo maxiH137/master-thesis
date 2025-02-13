@@ -27,7 +27,7 @@ from models.DeepConvLSTM import DeepConvLSTM
 from models.TinyHAR import TinyHAR
 from utils.torch_utils import init_weights, worker_init_reset_seed, InertialDataset
 from torch.utils.data import DataLoader
-from opacus import layers, optimizers
+#from opacus import layers, optimizers
 from Samplers import UnbalancedSampler, BalancedSampler
 from Defense_Sampler import DefenseSampler
 from DPrivacy import DPrivacy
@@ -38,7 +38,7 @@ import random
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Opt-in to the future behavior to prevent the warning
-pd.set_option('future.no_silent_downcasting', True)
+#pd.set_option('future.no_silent_downcasting', True)
 
 class data_config_inertial:
     modality = "vision"
@@ -134,10 +134,10 @@ class Leakage():
                 # load train and val inertial data
                 train_data, val_data = np.empty((0, config['dataset']['input_dim'] + 2)), np.empty((0, config['dataset']['input_dim'] + 2))
                 for t_sbj in train_sbjs:
-                    t_data = pd.read_csv(os.path.join(config['dataset']['sens_folder'],  t_sbj + '.csv'), index_col=False).replace({"label": config['label_dict']}).infer_objects(copy=False).fillna(0).to_numpy()
+                    t_data = pd.read_csv(os.path.join(config['dataset']['sens_folder'],  t_sbj + '.csv'), index_col=False).replace({"label": config['label_dict']}).fillna(0).to_numpy()
                     train_data = np.append(train_data, t_data, axis=0)
                 for v_sbj in val_sbjs:
-                    v_data = pd.read_csv(os.path.join(config['dataset']['sens_folder'],  v_sbj + '.csv'), index_col=False).replace({"label": config['label_dict']}).infer_objects(copy=False).fillna(0).to_numpy()
+                    v_data = pd.read_csv(os.path.join(config['dataset']['sens_folder'],  v_sbj + '.csv'), index_col=False).replace({"label": config['label_dict']}).fillna(0).to_numpy()
                     val_data = np.append(val_data, v_data, axis=0)
 
                 # define inertial datasets
@@ -327,6 +327,7 @@ class Leakage():
                     shared_user_data, payloads, true_user_data_all = server_br.run_protocol(user, True) 
                 else:
                     shared_user_data, payloads, true_user_data_all = server_br.run_protocol(user) 
+                    
                 for idx, (shared_data, payload, true_user_data) in enumerate(zip(shared_user_data, payloads, true_user_data_all)):
                 
                     shared_data = [shared_data]
