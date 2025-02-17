@@ -289,7 +289,13 @@ class Leakage():
 
                 # Instantiate user and attacker
                 #user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=test_dataset)
-                user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=train_dataset)
+                users = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=train_dataset)
+                
+                used_sbjs = []
+                for user in users.users:
+                    used_sbjs.append(user.dataloader.dataset.ids[0])
+                    if args.neptune:
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + '/used_sbjs'].append(user.dataloader.dataset.ids[0])
                 
                 if args.neptune:
                     log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
@@ -315,7 +321,7 @@ class Leakage():
                 batchLabels_all = []
                     
                 # Summarize startup:
-                breaching.utils.overview(server_br, user, attacker)
+                breaching.utils.overview(server_br, users, attacker)
 
                 # Simulate a simple FL protocol
                 #shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
@@ -324,9 +330,9 @@ class Leakage():
                 
                 # Run an attack using only payload information and shared data
                 if args.avg == 'multiU':
-                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(user, True) 
+                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(users, True) 
                 else:
-                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(user) 
+                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(users) 
                     
                 for idx, (shared_data, payload, true_user_data) in enumerate(zip(shared_user_data, payloads, true_user_data_all)):
                 
@@ -474,7 +480,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/leakage/wear_loso_deep.yaml')
     parser.add_argument('--eval_type', default='loso')
-    parser.add_argument('--neptune', default=False, type=bool)
+    parser.add_argument('--neptune', default=True, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
     parser.add_argument('--seed', default=1, type=int)       
     parser.add_argument('--gpu', default='cuda:0', type=str)
@@ -482,7 +488,7 @@ if __name__ == '__main__':
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
     #parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'ebi','random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['gcd', 'bias-corrected', 'iRLG', 'wainakh-simple', 'wainakh-whitebox', 'ebi','random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=True, type=bool)
     parser.add_argument('--avg', default='multiU', choices=['localU', 'multiU'], type=str)
@@ -490,4 +496,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     leakage = Leakage()  
+    leakage.main(args)
+    
+    args.sampling = 'balanced'
+    leakage.main(args)
+    
+    args.sampling = 'unbalanced'
+    leakage.main(args)
+    
+    args.sampling = 'shuffle'
     leakage.main(args)
