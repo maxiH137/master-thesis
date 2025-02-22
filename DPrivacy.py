@@ -17,6 +17,7 @@ class BreachDP():
     def __init__(self, local_diff_privacy, setup):
         self.defense_repr = []
         """Initialize generators for noise in either gradient or input."""
+        self.local_diff_privacy = local_diff_privacy
         if local_diff_privacy["gradient_noise"] > 0.0:
             loc = torch.as_tensor(0.0, **setup)
             scale = torch.as_tensor(local_diff_privacy["gradient_noise"], **setup)

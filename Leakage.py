@@ -370,13 +370,17 @@ class Leakage():
                         for label, count in label_counts.items():
                             writer.writerow([label, count])
                     
-                    
+                    if run is not None:
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/clipping"] = self.breachingDP.clip_value
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/noise"] = self.breachingDP.generator_input.scale.item()
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/distribution"] = self.breachingDP.local_diff_privacy["distribution"]
+
                     gradients = torch.autograd.grad(loss, model.parameters())
-                    #gradients_noise = self.breachingDP.applyNoise([g.clone() for g in gradients])
-                    #gradients = self.breachingDP.clampGradient({'inputs': onedimdata, 'labels': labels}, config['loader']['train_batch_size'])
-                    #gradients_clipped = self.breachingDP._clip_list_of_grad_([g.clone() for g in gradients_noise])
-                    
-                    #gradients = gradients_clipped
+                    #gradients = self.breachingDP.clampGradient(model, {'inputs': onedimdata, 'labels': labels}, config['loader']['train_batch_size'])
+                    gradients_clipped = self.breachingDP._clip_list_of_grad_([g.clone() for g in gradients])
+                    gradients_noise = self.breachingDP.applyNoise([g.clone() for g in gradients_clipped])
+
+                    gradients = gradients_noise
                     
                     # Access gradients
                     #for (name, _), grad in zip(model.named_parameters(), gradients):
