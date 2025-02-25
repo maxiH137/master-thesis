@@ -75,7 +75,7 @@ class Leakage():
         self.run = run
         self.config = config
         self.dpri = DPrivacy(multiplier=0.1, clip=0.1)
-        self.breachingDP = BreachDP(local_diff_privacy={"gradient_noise": 0.1, "input_noise": 0.1, "distribution": "gaussian", "per_example_clipping": 0.1}, setup=dict(device=torch.device("cpu"), dtype=torch.float))
+        self.breachingDP = BreachDP(local_diff_privacy={"gradient_noise": 0.1, "input_noise": 0.0, "distribution": "gaussian", "per_example_clipping": 0.1}, setup=dict(device=torch.device("cpu"), dtype=torch.float))
     
     def main(self, args):
         
@@ -372,7 +372,8 @@ class Leakage():
                     
                     if run is not None:
                         run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/clipping"] = self.breachingDP.clip_value
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/noise"] = self.breachingDP.generator_input.scale.item()
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/grad_noise"] = self.breachingDP.local_diff_privacy["gradient_noise"]
+                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/input_noise"] = self.breachingDP.local_diff_privacy["input_noise"]
                         run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/distribution"] = self.breachingDP.local_diff_privacy["distribution"]
 
                     gradients = torch.autograd.grad(loss, model.parameters())
@@ -544,9 +545,9 @@ if __name__ == '__main__':
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
    # parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'ebi', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['bias-corrected'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['analytic'], type=str)
     parser.add_argument('--resume', default='', type=str)
-    parser.add_argument('--batch_size', default=1, type=int)
+    parser.add_argument('--batch_size', default=100, type=int)
     parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--sampling', default='shuffle', choices=['sequential','defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
     args = parser.parse_args()
