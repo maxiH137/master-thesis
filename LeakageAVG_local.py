@@ -101,7 +101,11 @@ class Leakage():
             run['args/datapoints'] = config['loader']['train_batch_size']
             run['args/classes'] = config['dataset']['num_classes']
             run['args/label_strat_array'] = args.label_strat_array
-            run['args/fedAVG'] = args.avg
+            run['args/num_data_points'] = args.num_data_points
+            run['args/num_data_per_local_update_step'] = args.num_data_per_local_update_step
+            run['args/num_local_updates'] = args.num_local_updates
+            run['args/noise'] = args.noise
+            run['args/clipping'] = args.clipping
         
         device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         setup = dict(device=torch.device("cpu"), dtype=torch.float)
@@ -242,32 +246,35 @@ class Leakage():
                     run['label_attack' + '/' + str(label_strat) + '/attack_config_name'] = args.attack
                 
                 if trained:
-                    with open('CSV_avg_mult/' + 'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                             writer = csv.writer(file)
                             writer.writerow(['GT', 'Pred', 'Sbj'])
 
-                    with open('CSV_avg_mult/' + 'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                             writer = csv.writer(file)
                             for g in range(config['dataset']['num_classes'] + 1):
                                 grads.append('G' + str(g))
                             writer.writerow(grads)
                 else:
-                    with open('CSV_avg_mult/' + 'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                         writer = csv.writer(file)
                         writer.writerow(['GT', 'Pred', 'Sbj'])
 
-                    with open('CSV_avg_mult/' + 'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
+                    with open('CSV_avg_local/' + 'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', 'w', newline='') as file:
                             writer = csv.writer(file)
                             for g in range(config['dataset']['num_classes'] + 1):
                                 grads.append('G' + str(g))
                             writer.writerow(grads)
 
                 # This is the attacker:
-                if args.avg == 'localU':
+                if args.avg == 'localU' and config['dataset_name'] == 'wear':
                     cfg_case = breaching.get_case_config('4_fedavg_small_scale_har') # user with local_updates
                 else:
-                    cfg_case = breaching.get_case_config('8_industry_scale_fl_har') #  multiuser_aggregate
-                
+                    cfg_case = breaching.get_case_config('4_fedavg_small_scale_har_wetlab') # user with local_updatesS
+
+                if 'tiny' in args.config:
+                    cfg_case['model'] = 'TinyHAR'
+
                 if args.sampling == 'shuffle':
                     cfg_case['data']['shuffle'] = 'shuffle'
                 elif args.sampling == 'balanced':
@@ -277,7 +284,15 @@ class Leakage():
                 elif args.sampling == 'sequential':
                     cfg_case['data']['shuffle'] = 'sequential'
                 
-                
+                ####################################################
+                cfg_case['user']['num_data_points'] = args.num_data_points
+                cfg_case['user']['num_data_per_local_update_step'] = args.num_data_per_local_update_step
+                cfg_case['user']['num_local_updates'] = args.num_local_updates
+
+                #if(args.avg == 'multiU'):
+                #    cfg_case['user']['user_range'] = [0, args.user_range]
+                ####################################################
+
                 cfg_attack = breaching.get_attack_config(args.attack)
                 cfg_attack['optim']['max_iterations'] = int(config['attack']['iterations'])
                 cfg_attack['label_strategy'] = label_strat
@@ -289,14 +304,12 @@ class Leakage():
 
                 # Instantiate user and attacker
                 #user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=test_dataset)
-                users = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=train_dataset)
+                cfg_case['user']['local_diff_privacy'].update({'per_example_clipping': args.clipping})
+                cfg_case['user']['local_diff_privacy'].update({'gradient_noise': args.noise})
+
+                user = breaching.cases.construct_user(model, loss_fn, cfg_case, setup, dataset=test_dataset)
                 
-                used_sbjs = []
-                for user in users.users:
-                    used_sbjs.append(user.dataloader.dataset.ids[0])
-                    if args.neptune:
-                        run['label_attack' + '/' + str(label_strat) + '/' + split_name + '/used_sbjs'].append(user.dataloader.dataset.ids[0])
-                
+                 
                 if args.neptune:
                     log_dir_atk = os.path.join('logs', args.attack, '_' + run_id)
                     sys.stdout = Logger(os.path.join(log_dir_atk, 'log.txt'))
@@ -321,7 +334,7 @@ class Leakage():
                 batchLabels_all = []
                     
                 # Summarize startup:
-                breaching.utils.overview(server_br, users, attacker)
+                breaching.utils.overview(server_br, user, attacker)
 
                 # Simulate a simple FL protocol
                 #shared_user_data, payloads, true_user_data = server_br.run_protocol(user)
@@ -329,10 +342,7 @@ class Leakage():
                 #Subset = torch.utils.data.Subset(train_dataset, shared_user_data['indices'])
                 
                 # Run an attack using only payload information and shared data
-                if args.avg == 'multiU':
-                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(users, True) 
-                else:
-                    shared_user_data, payloads, true_user_data_all = server_br.run_protocol(users) 
+                shared_user_data, payloads, true_user_data_all = server_br.run_protocol(user) 
                     
                 for idx, (shared_data, payload, true_user_data) in enumerate(zip(shared_user_data, payloads, true_user_data_all)):
                 
@@ -388,14 +398,14 @@ class Leakage():
 
                     # Append to CSV without writing header again
                     if(not trained):
-                        appendData.to_csv('CSV_avg_mult/' + 'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                        appendData.to_csv('CSV_avg_local/' + 'labels_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
                     else: 
-                        appendData.to_csv('CSV_avg_mult/' + 'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                        appendData.to_csv('CSV_avg_local/' + 'labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
 
                     if(not trained):
-                        appendGradient.to_csv('CSV_avg_mult/' + 'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                        appendGradient.to_csv('CSV_avg_local/' + 'gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
                     else:
-                        appendGradient.to_csv('CSV_avg_mult/' + 'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
+                        appendGradient.to_csv('CSV_avg_local/' + 'gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv', mode='a', header=False, index=False, float_format='%.4f')
                         
                         
                     # Calculate leAcc and LnAcc
@@ -467,20 +477,20 @@ class Leakage():
                 
                 # Upload csv files to neptune
                 if trained and run is not None:
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelT-csv"].upload('CSV_avg_mult/labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradientT-csv"].upload('CSV_avg_mult/gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/labelT-csv"].upload('CSV_avg_local/labelsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradientT-csv"].upload('CSV_avg_local/gradientsT_' + str(config['name']) + '_' + str(label_strat) + '.csv')
                 elif run is not None:
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/label-csv"].upload('CSV_avg_mult/labels_' + str(config['name']) + '_' + str(label_strat) +  '.csv') 
-                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradient-csv"].upload('CSV_avg_mult/gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv') 
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/label-csv"].upload('CSV_avg_local/labels_' + str(config['name']) + '_' + str(label_strat) +  '.csv') 
+                    run['label_attack' + '/' + str(label_strat) + '/' + split_name + "/data/gradient-csv"].upload('CSV_avg_local/gradients_' + str(config['name']) + '_' + str(label_strat) + '.csv') 
 
                 if run is not None:
                     run.wait()
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='./configs/leakage/wear_loso_deep.yaml')
+    parser.add_argument('--config', default='./configs/leakage/wetlab_loso_tiny.yaml')
     parser.add_argument('--eval_type', default='loso')
-    parser.add_argument('--neptune', default=True, type=bool)
+    parser.add_argument('--neptune', default=False, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
     parser.add_argument('--seed', default=1, type=int)       
     parser.add_argument('--gpu', default='cuda:0', type=str)
@@ -488,11 +498,19 @@ if __name__ == '__main__':
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
     #parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['gcd', 'bias-corrected', 'iRLG', 'wainakh-simple', 'wainakh-whitebox', 'ebi','random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'gcd', 'bias-corrected', 'iRLG', 'wainakh-simple', 'wainakh-whitebox', 'ebi','random'], type=str)
     parser.add_argument('--resume', default='', type=str)
-    parser.add_argument('--trained', default=True, type=bool)
+    parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--avg', default='localU', choices=['localU', 'multiU'], type=str)
     parser.add_argument('--sampling', default='sequential', choices=['sequential', 'balanced', 'unbalanced', 'shuffle'], type=str)
+
+    # Attack parameters
+    parser.add_argument('--num_data_points', default=1000, type=int)  
+    parser.add_argument('--num_data_per_local_update_step', default=100, type=int)  
+    parser.add_argument('--num_local_updates', default=5, type=int)     
+    parser.add_argument('--clipping', default=0.0, type=float)                                                     
+    parser.add_argument('--noise', default=0.0, type=float)  
+
     args = parser.parse_args()
     
     leakage = Leakage()  

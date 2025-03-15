@@ -2,7 +2,7 @@ name: tinyhar
 dataset_name: wetlab
 has_null: True
 anno_json: [
-  'data/wetlab/annotations/loso_sbj_0.json',
+  #'data/wetlab/annotations/loso_sbj_0.json',
   #'data/wetlab/annotations/loso_sbj_1.json',
   #'data/wetlab/annotations/loso_sbj_2.json',
   #'data/wetlab/annotations/loso_sbj_3.json',
@@ -23,7 +23,7 @@ anno_json: [
   #'data/wetlab/annotations/loso_sbj_18.json',
   #'data/wetlab/annotations/loso_sbj_19.json',
   #'data/wetlab/annotations/loso_sbj_20.json',
-  #'data/wetlab/annotations/loso_sbj_21.json'
+  'data/wetlab/annotations/loso_sbj_21.json'
 ]
 dataset: {
   sens_folder: ./data/wetlab/raw/inertial,

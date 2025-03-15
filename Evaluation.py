@@ -39,7 +39,7 @@ class Evaluation():
             project=parser_args.project,
             api_token=parser_args.api_token,
             with_id=run_id, 
-            mode="read-only"
+            #mode="read-only"
         )
 
         # Access parameters, metadata, or logged data
@@ -70,10 +70,30 @@ class Evaluation():
                 sbjs_number = 0
                 self.ln_all = 0 
 
+        # Calculate label number accuracy over all subjects for each attack
+        # Add final_lnAcc to the log, if it is missing
+        self.le_all = 0
+        sbjs_number = 0
+        for attack in self.attacks:
+            if attack in parser_args.label_strat_array:
+                for sbjs in self.attacks[attack]:
+                    if "loso_sbj_" in sbjs:
+                        try:
+                            self.le_all += self.attacks[attack][sbjs]["final_leAcc"]
+                            sbjs_number += 1
+                        except:
+                            print(f'Error final_leAcc missing: {attack} {sbjs}')
+                            self.lnAcc = old_run[f"label_attack/{attack}/{sbjs}/leAcc"].fetch_values()
+                            self.values = np.array(self.lnAcc.values[:, 1], dtype=float)
+                            old_run[f"label_attack/{attack}/{sbjs}/final_leAcc"] = round(self.values.mean(), 1)
+
+                print('Attack: ' + attack + ' ' +  str(self.le_all / sbjs_number))   
+                sbjs_number = 0
+                self.le_all = 0
 
         # Load the attck results again, to consider possible changes
         self.attacks = old_run["label_attack"].fetch()
-
+        """
         # Validate leAcc calculations 
         self.leAcc = 0
         for attack in self.attacks:
@@ -140,7 +160,7 @@ class Evaluation():
             print(f"Correct combination: {correct_combination}")
         else:
             print("No matching combination found.")
-            
+       """     
         old_run["sys/failed"] = False
         old_run.stop()
 
@@ -192,14 +212,14 @@ if __name__ == '__main__':
         
         
     # """  
-    args.runs = ['TAL-183', 'TAL-184', 'TAL-198', 'TAL-267'] # TinyHAR, SGD, Trained, WEAR
+    args.runs = ['TAL-304', 'TAL-309', 'TAL-299', 'TAL-302', 'TAL-162', 'TAL-163', 'TAL-164', 'TAL-230', 'TAL-289', 'TAL-292', 'TAL-301', 'TAL-294', 'TAL-165', 'TAL-166', 'TAL-235', 'TAL-167', 'TAL-253', 'TAL-258', 'TAL-274', 'TAL-264', 'TAL-168', 'TAL-169', 'TAL-244', 'TAL-170', 'TAL-314', 'TAL-315', 'TAL-311', 'TAL-312', 'TAL-171', 'TAL-172', 'TAL-255', 'TAL-173', 'TAL-303', 'TAL-306', 'TAL-310', 'TAL-308', 'TAL-215', 'TAL-218', 'TAL-272', 'TAL-219', 'TAL-280', 'TAL-282', 'TAL-288', 'TAL-286', 'TAL-174', 'TAL-175', 'TAL-265', 'TAL-176', 'TAL-300', 'TAL-316', 'TAL-318', 'TAL-307', 'TAL-177', 'TAL-178', 'TAL-278', 'TAL-179', 'TAL-263', 'TAL-266', 'TAL-277', 'TAL-273', 'TAL-180', 'TAL-220', 'TAL-275', 'TAL-221', 'TAL-252', 'TAL-254', 'TAL-257', 'TAL-256', 'TAL-183', 'TAL-184', 'TAL-267', 'TAL-198', 'TAL-320', 'TAL-322', 'TAL-324', 'TAL-323', 'TAL-199', 'TAL-200', 'TAL-283', 'TAL-214', 'TAL-279', 'TAL-281', 'TAL-285', 'TAL-284', 'TAL-222', 'TAL-227', 'TAL-276', 'TAL-228', 'TAL-259', 'TAL-260', 'TAL-262', 'TAL-261', 'TAL-270', 'TAL-271', 'TAL-268', 'TAL-269'] # DeepConv, SGD, Trained, WEAR
     for run in args.runs:
         eval = Evaluation()
         args.run_id = run
-        args.label_strat_array = ['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox']
+        #args.label_strat_array = ['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox']
         eval.calculate_accuracy_metrics(args)
         eval_results.append(eval)
-
+    """
     args.runs = ['TAL-252', 'TAL-254', 'TAL-256', 'TAL-257'] # TinyHAR, SGD, Untrained, WEAR
     for run in args.runs:
         eval = Evaluation()

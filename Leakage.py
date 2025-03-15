@@ -75,7 +75,7 @@ class Leakage():
         self.run = run
         self.config = config
         self.dpri = DPrivacy(multiplier=0.1, clip=0.1)
-        self.breachingDP = BreachDP(local_diff_privacy={"gradient_noise": 0.1, "input_noise": 0.0, "distribution": "gaussian", "per_example_clipping": 0.1}, setup=dict(device=torch.device("cpu"), dtype=torch.float))
+        self.breachingDP = BreachDP(local_diff_privacy={"gradient_noise": 0.1, "input_noise": 0.0, "distribution": "gaussian", "per_example_clipping": 1.5}, setup=dict(device=torch.device("cpu"), dtype=torch.float))
     
     def main(self, args):
         
@@ -535,7 +535,7 @@ class Leakage():
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='./configs/leakage/wear_loso_deep.yaml')
+    parser.add_argument('--config', default='./configs/leakage/wetlab_loso_deep.yaml')
     parser.add_argument('--eval_type', default='loso')
     parser.add_argument('--neptune', default=False, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
@@ -544,12 +544,12 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-   # parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iRLG', 'gcd', 'ebi', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['analytic'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgSGD', 'bias-corrected', 'iLRG', 'gcd', 'ebi', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+   
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--batch_size', default=100, type=int)
-    parser.add_argument('--trained', default=False, type=bool)
-    parser.add_argument('--sampling', default='shuffle', choices=['sequential','defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
+    parser.add_argument('--trained', default=True, type=bool)
+    parser.add_argument('--sampling', default='sequential', choices=['sequential','defense', 'balanced', 'unbalanced', 'shuffle'], type=str)
     args = parser.parse_args()
     
     leakage = Leakage()  
