@@ -2,10 +2,10 @@ name: deepconvlstm
 dataset_name: wear
 has_null: True
 anno_json: [
-  #'data/annotations/loso_sbj_0.json',
-  #'data/annotations/loso_sbj_1.json',
-  #'data/annotations/loso_sbj_2.json',
-  #'data/annotations/loso_sbj_3.json',
+  'data/annotations/loso_sbj_0.json',
+  'data/annotations/loso_sbj_1.json',
+  'data/annotations/loso_sbj_2.json',
+  'data/annotations/loso_sbj_3.json',
   #'data/annotations/loso_sbj_4.json',
   #'data/annotations/loso_sbj_5.json',
   #'data/annotations/loso_sbj_6.json',
@@ -19,7 +19,7 @@ anno_json: [
   #'data/annotations/loso_sbj_14.json',
   #'data/annotations/loso_sbj_15.json',
   #'data/annotations/loso_sbj_16.json',
-  'data/annotations/loso_sbj_17.json',
+  #'data/annotations/loso_sbj_17.json',
 ]
 dataset: {
   sens_folder: ./data/raw/inertial,

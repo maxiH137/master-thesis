@@ -124,6 +124,7 @@ class Leakage():
             subjects_list_middle = [1,20,0,17,16]
             subjects_list_low = [10,15,7,4,9]
         
+        subject_lists.append([1,1,1,1,1])
         subject_lists.append(subjects_list_low)
         subject_lists.append(subjects_list_middle)
         subject_lists.append(subjects_list_high)  
@@ -160,26 +161,26 @@ class Leakage():
 
                     # define inertial datasets
                     train_dataset = InertialDataset(train_data, config['dataset']['window_size'], config['dataset']['window_overlap'])
-                    test_dataset = InertialDataset(val_data, config['dataset']['window_size'], config['dataset']['window_overlap'])
+                    # = InertialDataset(val_data, config['dataset']['window_size'], config['dataset']['window_overlap'])
 
                     # define dataloaders
-                    unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes']), random.randint(0, config['dataset']['num_classes']))
-                    balanced_sampler = BalancedSampler(test_dataset)
-                    defense_sampler = DefenseSampler(test_dataset, random.randint(0, config['dataset']['num_classes']))
+                    #unbalanced_sampler = UnbalancedSampler(test_dataset, random.randint(0, config['dataset']['num_classes']), random.randint(0, config['dataset']['num_classes']))
+                    #balanced_sampler = BalancedSampler(test_dataset)
+                    #defense_sampler = DefenseSampler(test_dataset, random.randint(0, config['dataset']['num_classes']))
                     
                     config['init_rand_seed'] = args.seed
                     rng_generator = fix_random_seed(config['init_rand_seed'], include_cuda=True) 
                     train_loader = DataLoader(train_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
-                    val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
-                    unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
-                    balanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=balanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
-                    defense_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=defense_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                    #val_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], shuffle=True, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                    #unbalanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=unbalanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                    #balanced_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=balanced_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
+                    #defense_loader = DataLoader(test_dataset, config['loader']['train_batch_size'], sampler=defense_sampler, num_workers=4, worker_init_fn=worker_init_reset_seed, generator=rng_generator, persistent_workers=True)
                     
-                    defense_loader.name = 'defense'
-                    unbalanced_loader.name = 'unbalanced' 
-                    balanced_loader.name = 'balanced'
+                    #defense_loader.name = 'defense'
+                    #unbalanced_loader.name = 'unbalanced' 
+                    #balanced_loader.name = 'balanced'
                     train_loader.name = 'train'
-                    val_loader.name = 'val'
+                    #val_loader.name = 'val'
                                     
                     if 'tinyhar' in config['name'] and trained:
                         args.resume = 'saved_models/' + config['dataset_name'] + f'/tinyhar/epoch_100_loso_sbj_{i}.pth.tar'
@@ -505,7 +506,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/leakage/wear_loso_deep.yaml')
     parser.add_argument('--eval_type', default='loso')
-    parser.add_argument('--neptune', default=False, type=bool)
+    parser.add_argument('--neptune', default=True, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
     parser.add_argument('--seed', default=1, type=int)       
     parser.add_argument('--gpu', default='cuda:0', type=str)
@@ -513,17 +514,17 @@ if __name__ == '__main__':
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
     #parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['gcd','llbgSGD','llbgAVG', 'iLRG', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['gcd','llbgAVG'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--avg', default='multiU', choices=['localU', 'multiU'], type=str)
-    parser.add_argument('--sampling', default='unbalanced', choices=['sequential', 'balanced', 'unbalanced', 'shuffle'], type=str)
+    parser.add_argument('--sampling', default='sequential', choices=['sequential', 'balanced', 'unbalanced', 'shuffle'], type=str)
 
     # Attack parameters
-    parser.add_argument('--num_data_points', default=100, type=int)  
+    parser.add_argument('--num_data_points', default=500, type=int)  
     parser.add_argument('--num_data_per_local_update_step', default=100, type=int)  
-    parser.add_argument('--num_local_updates', default=10, type=int)  
-    parser.add_argument('--user_range', default=2, type=int)  
+    parser.add_argument('--num_local_updates', default=5, type=int)  
+    parser.add_argument('--user_range', default=5, type=int)  
 
     args = parser.parse_args()
     

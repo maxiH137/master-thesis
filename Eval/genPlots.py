@@ -120,6 +120,7 @@ def group_and_average(runs, filter_terms):
                 values['ln_acc'] = np.mean(values['ln_acc'], axis=0).tolist()
                 values['le_acc'] = np.mean(values['le_acc'], axis=0).tolist()
                 for subject in values['subjects']:
+                    x = values['subjects'][subject]
                     values['subjects'][subject] = np.mean(values['subjects'][subject], axis=0).tolist()
         
         
@@ -190,12 +191,12 @@ runs_data = parse_output_file(output_file)
 
 # Define filter terms for grouping and process them
 filter_sets = [
-    #["1", "wear"],
+    ["deepconvlstm","100", 'True', "wear"],
     #["1", "wetlab"],
-    ["deepconvlstm", "100", "wear"],
-    ["deepconvlstm", "100", "wetlab"],
-    ["tinyhar", "100", "wear"],
-    ["tinyhar", "100", "wetlab"],
+   # ["deepconvlstm", "100", "wear"],
+   # ["deepconvlstm", "100", "wetlab"],
+   # ["tinyhar", "100", "wear"],
+   # ["tinyhar", "100", "wetlab"],
 
    # ["1", "wear", 'True'],
    # ["1", "wetlab", 'True'],
