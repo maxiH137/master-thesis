@@ -54,7 +54,7 @@ It is necessary to include the dataset, train the models from the TAL repository
 
 The main functions for FedAVG evaluation are LeakageAVG_local.py and LeakageAVG_mult.py.
 It is necessary to include the dataset, train the models from the TAL repository and integrate the breaching repository before starting experiments.
-In these scripts config files of the breaching repository are used and need to be adjusted accordingly. 
+In these scripts, config files of the breaching repository are loaded and some parameters need to be adjusted manually, e.g. clipping and noise. 
 For example the noise and clipping can be adjusted in the breaching repository config.
 
 The commands to execute the Federated Learning Leakage scripts are:
