@@ -43,8 +43,8 @@ Setup:
 2. Create TAL Conda environment or use a fresh Conda env and run pip install -r requirements.txt
 3. Install breaching (if not installed by requirements.txt)
 4. Change breaching files with the breaching files from this repository
-5. Set up WEAR and Wetlab dataset
-6. Create checkpoints of DeepConvLSTM and TinyHAR with the TAL repository. Include them in folder "saved_models".
+5. Set up WEAR and Wetlab data in /data
+6. Create checkpoints of DeepConvLSTM and TinyHAR with the TAL repository. Put them in folder "saved_models".
 
 
 ## Experiments
