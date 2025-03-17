@@ -38,6 +38,14 @@ Some files in the breaching repository need to be adjusted, to fit the HAR setti
 In the folder breaching all files are contained, even unchanged ones. 
 The most important changes are in base_attack.py, where the label reconstruction attacks are executed.
 
+Setup:
+1. Clone repository
+2. Create TAL Conda environment or use a fresh Conda env and run pip install -r requirements.txt
+3. Install breaching (if not installed by requirements.txt)
+4. Change breaching files with the breaching files from this repository
+5. Set up WEAR and Wetlab dataset
+
+
 ## Experiments
 The main function for FedSGD evaluation is Leakage.py. 
 It is necessary to include the dataset, train the models from the TAL repository and integrate the breaching repository before starting experiments.
