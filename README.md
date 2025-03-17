@@ -45,7 +45,14 @@ The main functions for FedAVG evaluation are LeakageAVG_local.py and LeakageAVG_
 It is necessary to include the dataset, train the models from the TAL repository and integrate the breaching repository before starting experiments.
 In these scripts config files of the breaching repository are used and need to be adjusted accordingly. 
 
-# Evaluation
+##
+The runs can be created with the Leakage.py (FedSGD), Leakage_local.py (FedAVG Local updates) and Leakage_mult.py (FedAVG Multi User)
+The command to execute the scripts are:
+- <p>Leakage.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained </p>
+- <p>LeakageAVG_local.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained True --num_data_points 500 --num_data_per_local_update_step 100 --num_local_updates 5</p>
+- <p>LeakageAVG_mult.py --./configs/leakage/wear_loso_deep.yaml --trained True --num_data_points 500 --num_data_per_local_update_step 100 --num_local_updates 5 --user_range 5</p>
+
+## Evaluation
 In the eval folder different scripts can be found to load runs from neptune, group them and average them. 
 The most up to date ones are Eval_all.py and the genPlots python scripts. 
 Eval_all creates an output file that is loaded by genPlots, which creates Plots and grouped/averaged .csv files for use in Excel. 
