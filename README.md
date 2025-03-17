@@ -1,7 +1,7 @@
 # Differential Privacy for Human Activity Recognition
 
 This repository contains the code for the master thesis "Differential Privacy for Human Activity Recognition" of Maximilian Hopp.
-The thesis is submitted to Professor Michael Moeller at the University of Siegen.
+The thesis is submitted to Professor Michael Möller at the University of Siegen.
 
 ## Introduction
 Gradient Inversion (GI) is a problem that emerged after the develop-
