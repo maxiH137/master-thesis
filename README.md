@@ -29,7 +29,7 @@ attacks. Individual subjects showed a difference of up to 10% in the ac-
 curacy of label reconstruction, possibly due to the different distribution
 of their data.
 
-(Abstract from the "Master_Thesis Maximilian Hopp.pdf")
+(Abstract from "Master_Thesis Maximilian Hopp.pdf")
 
 ## Requirements
 Use requirements.txt to create necessary conda environment.
