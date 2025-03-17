@@ -69,4 +69,4 @@ Eval_all creates an output file that is loaded by genPlots, which creates Plots 
 ## Ackownledgement
 For the model training the TAL repository by Marius Bock is used as well as the WEAR and Wetlab dataset implementation (https://github.com/mariusbock/tal_for_har).
 The label reconstruction attacks are evaluated with the breaching repository by Geiping et al. (https://github.com/JonasGeiping/breaching).
-Additional attacks are added from Ma et al. (https://github.com/BUAA-CST/iLRG) and Gat et al. (https://github. com/nadbag98/LLBG). 
+Additional attacks are added from Ma et al. (https://github.com/BUAA-CST/iLRG) and Gat et al. (https://github.com/nadbag98/LLBG). 
