@@ -1,0 +1,2 @@
+Put WEAR annotations, inertial features and raw folder directly in /data.
+Put Wetlab annotations, inertial features and raw folder into a folder named Wetlab in /data.
