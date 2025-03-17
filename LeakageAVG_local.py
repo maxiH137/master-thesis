@@ -488,7 +488,7 @@ class Leakage():
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='./configs/leakage/wetlab_loso_tiny.yaml')
+    parser.add_argument('--config', default='./configs/leakage/wear_loso_tiny.yaml')
     parser.add_argument('--eval_type', default='loso')
     parser.add_argument('--neptune', default=False, type=bool)
     parser.add_argument('--run_id', default='run', type=str)
@@ -497,15 +497,15 @@ if __name__ == '__main__':
     
     # New arguments
     parser.add_argument('--attack', default='_default_optimization_attack', type=str)
-    #parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iRLG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
-    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'gcd', 'bias-corrected', 'iRLG', 'wainakh-simple', 'wainakh-whitebox', 'ebi','random'], type=str)
+    #parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'bias-corrected', 'iLRG', 'gcd', 'wainakh-simple', 'wainakh-whitebox', 'iDLG', 'analytic', 'yin', 'random'], type=str)
+    parser.add_argument('--label_strat_array', nargs='+', default=['llbgAVG', 'gcd', 'bias-corrected', 'iLRG', 'wainakh-simple', 'wainakh-whitebox', 'ebi','random'], type=str)
     parser.add_argument('--resume', default='', type=str)
     parser.add_argument('--trained', default=False, type=bool)
     parser.add_argument('--avg', default='localU', choices=['localU', 'multiU'], type=str)
     parser.add_argument('--sampling', default='sequential', choices=['sequential', 'balanced', 'unbalanced', 'shuffle'], type=str)
 
     # Attack parameters
-    parser.add_argument('--num_data_points', default=1000, type=int)  
+    parser.add_argument('--num_data_points', default=300, type=int)  
     parser.add_argument('--num_data_per_local_update_step', default=100, type=int)  
     parser.add_argument('--num_local_updates', default=5, type=int)     
     parser.add_argument('--clipping', default=0.0, type=float)                                                     
