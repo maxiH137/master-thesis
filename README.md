@@ -3,6 +3,7 @@
 This repository contains the code for the master thesis "Differential Privacy for Human Activity Recognition" of Maximilian Hopp.
 The thesis is submitted to Professor Michael Möller at the University of Siegen.
 
+
 ## Introduction
 Gradient Inversion (GI) is a problem that emerged after the develop-
 ment of the Federated Learning (FL) algorithm. In FL a neural net-
@@ -56,7 +57,7 @@ It is necessary to include the dataset, train the models from the TAL repository
 In these scripts config files of the breaching repository are used and need to be adjusted accordingly. 
 For example the noise and clipping can be adjusted in the breaching repository config.
 
-The command to execute the scripts are:
+The commands to execute the Federated Learning Leakage scripts are:
 - <p>Leakage.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained </p>
 - <p>LeakageAVG_local.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained True --num_data_points 500 --num_data_per_local_update_step 100 --num_local_updates 5</p>
 - <p>LeakageAVG_mult.py --./configs/leakage/wear_loso_deep.yaml --trained True --num_data_points 500 --num_data_per_local_update_step 100 --num_local_updates 5 --user_range 5</p>
@@ -66,7 +67,7 @@ In the eval folder different scripts can be found to load runs from neptune, gro
 The most up to date ones are Eval_all.py and the genPlots python scripts. 
 Eval_all creates an output file that is loaded by genPlots, which creates Plots and grouped/averaged .csv files for use in Excel. 
 
-## Ackownledgement
+## Acknowledgement
 For the model training the TAL repository by Marius Bock is used as well as the WEAR and Wetlab dataset implementation (https://github.com/mariusbock/tal_for_har).
 The label reconstruction attacks are evaluated with the breaching repository by Geiping et al. (https://github.com/JonasGeiping/breaching).
 Additional attacks are added from Ma et al. (https://github.com/BUAA-CST/iLRG) and Gat et al. (https://github.com/nadbag98/LLBG). 
