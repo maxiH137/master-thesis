@@ -34,9 +34,9 @@ of their data.
 
 ## Requirements
 Use requirements.txt to create necessary conda environment.
-It is basically the requirements of the TAL repository including an import of the breaching repository.
+It basically contains the requirements of the TAL repository including an import of the breaching repository.
 Some files in the breaching repository need to be adjusted, to fit the HAR setting.
-In the folder breaching all files are contained, even unchanged ones. 
+In the folder /breaching all files with changes are contained, even files without changes are included. 
 The most important changes are in base_attack.py, where the label reconstruction attacks are executed.
 
 Setup:
