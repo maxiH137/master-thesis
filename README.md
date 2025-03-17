@@ -35,7 +35,8 @@ of their data.
 Use requirements.txt to create necessary conda environment.
 It is basically the requirements of the TAL repository including an import of the breaching repository.
 Some files in the breaching repository need to be adjusted, to fit the HAR setting.
-
+In the folder breaching all files are contained, even unchanged ones. 
+The most important changes are in base_attack.py, where the label reconstruction attacks are executed.
 
 ## Experiments
 The main function for FedSGD evaluation is Leakage.py. 
@@ -44,9 +45,9 @@ It is necessary to include the dataset, train the models from the TAL repository
 The main functions for FedAVG evaluation are LeakageAVG_local.py and LeakageAVG_mult.py.
 It is necessary to include the dataset, train the models from the TAL repository and integrate the breaching repository before starting experiments.
 In these scripts config files of the breaching repository are used and need to be adjusted accordingly. 
+For example the noise and clipping can be adjusted in the breachin repository config.
 
-##
-The runs can be created with the Leakage.py (FedSGD), Leakage_local.py (FedAVG Local updates) and Leakage_mult.py (FedAVG Multi User)
+Leakage_mult.py (FedAVG Multi User)
 The command to execute the scripts are:
 - <p>Leakage.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained </p>
 - <p>LeakageAVG_local.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained True --num_data_points 500 --num_data_per_local_update_step 100 --num_local_updates 5</p>
