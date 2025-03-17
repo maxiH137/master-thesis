@@ -44,6 +44,7 @@ Setup:
 3. Install breaching (if not installed by requirements.txt)
 4. Change breaching files with the breaching files from this repository
 5. Set up WEAR and Wetlab dataset
+6. Create checkpoints of DeepConvLSTM and TinyHAR with the TAL repository. Include them in folder "saved_models".
 
 
 ## Experiments
