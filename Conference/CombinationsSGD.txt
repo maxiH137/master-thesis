@@ -1,0 +1,96 @@
+0: ('deepconvlstm', True, 1, 'wear', 'shuffle')				Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling shuffle --batch_size 1 --trained
+1: ('deepconvlstm', True, 1, 'wear', 'unbalanced')          Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling unbalanced --batch_size 1 --trained
+2: ('deepconvlstm', True, 1, 'wear', 'balanced')            Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling balanced --batch_size 1 --trained
+3: ('deepconvlstm', True, 1, 'wear', 'sequential')          Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling sequential --batch_size 1 --trained
+4: ('deepconvlstm', True, 1, 'wetlab', 'shuffle')           Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling shuffle --batch_size 1 --trained
+5: ('deepconvlstm', True, 1, 'wetlab', 'unbalanced')        Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling unbalanced --batch_size 1 --trained
+6: ('deepconvlstm', True, 1, 'wetlab', 'balanced')          Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling balanced --batch_size 1 --trained
+7: ('deepconvlstm', True, 1, 'wetlab', 'sequential')        Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling sequential --batch_size 1 --trained
+8: ('deepconvlstm', True, 10, 'wear', 'shuffle')            Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling shuffle --batch_size 10 --trained
+9: ('deepconvlstm', True, 10, 'wear', 'unbalanced')         Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling unbalanced --batch_size 10 --trained
+10: ('deepconvlstm', True, 10, 'wear', 'balanced')          Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling balanced --batch_size 10 --trained
+11: ('deepconvlstm', True, 10, 'wear', 'sequential')        Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling sequential --batch_size 10 --trained
+12: ('deepconvlstm', True, 10, 'wetlab', 'shuffle')         Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling shuffle --batch_size 10 --trained
+13: ('deepconvlstm', True, 10, 'wetlab', 'unbalanced')      Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling unbalanced --batch_size 10 --trained
+14: ('deepconvlstm', True, 10, 'wetlab', 'balanced')        Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling balanced --batch_size 10 --trained
+15: ('deepconvlstm', True, 10, 'wetlab', 'sequential')      Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling sequential --batch_size 10 --trained
+16: ('deepconvlstm', True, 100, 'wear', 'shuffle')          Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling shuffle --batch_size 100 --trained
+17: ('deepconvlstm', True, 100, 'wear', 'unbalanced')       Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling unbalanced --batch_size 100 --trained
+18: ('deepconvlstm', True, 100, 'wear', 'balanced')         Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling balanced --batch_size 100 --trained
+19: ('deepconvlstm', True, 100, 'wear', 'sequential')       Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling sequential --batch_size 100 --trained
+20: ('deepconvlstm', True, 100, 'wetlab', 'shuffle')        Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling shuffle --batch_size 100 --trained
+21: ('deepconvlstm', True, 100, 'wetlab', 'unbalanced')     Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling unbalanced --batch_size 100 --trained
+22: ('deepconvlstm', True, 100, 'wetlab', 'balanced')       Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling balanced --batch_size 100 --trained
+23: ('deepconvlstm', True, 100, 'wetlab', 'sequential')     Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling sequential --batch_size 100 --trained
+24: ('deepconvlstm', False, 1, 'wear', 'shuffle')           Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling shuffle --batch_size 1 
+25: ('deepconvlstm', False, 1, 'wear', 'unbalanced')        Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling unbalanced --batch_size 1 
+26: ('deepconvlstm', False, 1, 'wear', 'balanced')          Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling balanced --batch_size 1 
+27: ('deepconvlstm', False, 1, 'wear', 'sequential')        Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling sequential --batch_size 1 
+28: ('deepconvlstm', False, 1, 'wetlab', 'shuffle')         Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling shuffle --batch_size 1 
+29: ('deepconvlstm', False, 1, 'wetlab', 'unbalanced')      Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling unbalanced --batch_size 1 
+30: ('deepconvlstm', False, 1, 'wetlab', 'balanced')        Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling balanced --batch_size 1 
+31: ('deepconvlstm', False, 1, 'wetlab', 'sequential')      Leakage.py --./configs/leakage/wetlab_loso_deep.yaml --sampling sequential --batch_size 1 
+32: ('deepconvlstm', False, 10, 'wear', 'shuffle')          Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling shuffle --batch_size 10 
+33: ('deepconvlstm', False, 10, 'wear', 'unbalanced')       Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling unbalanced --batch_size 10 
+34: ('deepconvlstm', False, 10, 'wear', 'balanced')         Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling balanced --batch_size 10 
+35: ('deepconvlstm', False, 10, 'wear', 'sequential')       Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling sequential --batch_size 10 
+36: ('deepconvlstm', False, 10, 'wetlab', 'shuffle')        Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling shuffle --batch_size 10 
+37: ('deepconvlstm', False, 10, 'wetlab', 'unbalanced')     Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling unbalanced --batch_size 10 
+38: ('deepconvlstm', False, 10, 'wetlab', 'balanced')       Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling balanced --batch_size 10 
+39: ('deepconvlstm', False, 10, 'wetlab', 'sequential')     Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling sequential --batch_size 10 
+40: ('deepconvlstm', False, 100, 'wear', 'shuffle')         Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling shuffle --batch_size 100 
+41: ('deepconvlstm', False, 100, 'wear', 'unbalanced')      Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling unbalanced --batch_size 100 
+42: ('deepconvlstm', False, 100, 'wear', 'balanced')        Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling balanced --batch_size 100 
+43: ('deepconvlstm', False, 100, 'wear', 'sequential')      Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling sequential --batch_size 100 
+44: ('deepconvlstm', False, 100, 'wetlab', 'shuffle')       Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling shuffle --batch_size 100 
+45: ('deepconvlstm', False, 100, 'wetlab', 'unbalanced')    Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling unbalanced --batch_size 100 
+46: ('deepconvlstm', False, 100, 'wetlab', 'balanced')      Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling balanced --batch_size 100 
+47: ('deepconvlstm', False, 100, 'wetlab', 'sequential')    Leakage.py --./configs/leakage/wetlab_loso_deep.yaml--sampling sequential --batch_size 100 
+48: ('tinyhar', True, 1, 'wear', 'shuffle')                 Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling shuffle --batch_size 1 --trained
+49: ('tinyhar', True, 1, 'wear', 'unbalanced')              Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling unbalanced --batch_size 1 --trained
+50: ('tinyhar', True, 1, 'wear', 'balanced')                Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling balanced --batch_size 1 --trained
+51: ('tinyhar', True, 1, 'wear', 'sequential')              Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling sequential --batch_size 1 --trained
+52: ('tinyhar', True, 1, 'wetlab', 'shuffle')               Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling shuffle --batch_size 1 --trained
+53: ('tinyhar', True, 1, 'wetlab', 'unbalanced')            Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling unbalanced --batch_size 1 --trained
+54: ('tinyhar', True, 1, 'wetlab', 'balanced')              Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling balanced --batch_size 1 --trained
+55: ('tinyhar', True, 1, 'wetlab', 'sequential')            Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling sequential --batch_size 1 --trained
+56: ('tinyhar', True, 10, 'wear', 'shuffle')                Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling shuffle --batch_size 10 --trained
+57: ('tinyhar', True, 10, 'wear', 'unbalanced')             Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling unbalanced --batch_size 10 --trained
+58: ('tinyhar', True, 10, 'wear', 'balanced')               Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling balanced --batch_size 10 --trained
+59: ('tinyhar', True, 10, 'wear', 'sequential')             Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling sequential --batch_size 10 --trained
+60: ('tinyhar', True, 10, 'wetlab', 'shuffle')              Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling shuffle --batch_size 10 --trained
+61: ('tinyhar', True, 10, 'wetlab', 'unbalanced')           Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling unbalanced --batch_size 10 --trained
+62: ('tinyhar', True, 10, 'wetlab', 'balanced')             Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling balanced --batch_size 10 --trained
+63: ('tinyhar', True, 10, 'wetlab', 'sequential')           Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml--sampling sequential --batch_size 10 --trained
+64: ('tinyhar', True, 100, 'wear', 'shuffle')               Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling shuffle --batch_size 100 --trained
+65: ('tinyhar', True, 100, 'wear', 'unbalanced')            Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling unbalanced --batch_size 100 --trained
+66: ('tinyhar', True, 100, 'wear', 'balanced')              Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling balanced --batch_size 100 --trained
+67: ('tinyhar', True, 100, 'wear', 'sequential')            Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling sequential --batch_size 100 --trained
+68: ('tinyhar', True, 100, 'wetlab', 'shuffle')             Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling shuffle --batch_size 100 --trained
+69: ('tinyhar', True, 100, 'wetlab', 'unbalanced')          Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling unbalanced --batch_size 100 --trained
+70: ('tinyhar', True, 100, 'wetlab', 'balanced')            Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling balanced --batch_size 100 --trained
+71: ('tinyhar', True, 100, 'wetlab', 'sequential')          Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling sequential --batch_size 100 --trained
+72: ('tinyhar', False, 1, 'wear', 'shuffle')                Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling shuffle --batch_size 1 
+73: ('tinyhar', False, 1, 'wear', 'unbalanced')             Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling unbalanced --batch_size 1 
+74: ('tinyhar', False, 1, 'wear', 'balanced')               Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling balanced --batch_size 1 
+75: ('tinyhar', False, 1, 'wear', 'sequential')             Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling sequential --batch_size 1 
+76: ('tinyhar', False, 1, 'wetlab', 'shuffle')              Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling shuffle --batch_size 1 
+77: ('tinyhar', False, 1, 'wetlab', 'unbalanced')           Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling unbalanced --batch_size 1 
+78: ('tinyhar', False, 1, 'wetlab', 'balanced')             Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling balanced --batch_size 1 
+79: ('tinyhar', False, 1, 'wetlab', 'sequential')           Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling sequential --batch_size 1 
+80: ('tinyhar', False, 10, 'wear', 'shuffle')               Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling shuffle --batch_size 10 
+81: ('tinyhar', False, 10, 'wear', 'unbalanced')            Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling unbalanced --batch_size 10 
+82: ('tinyhar', False, 10, 'wear', 'balanced')              Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling balanced --batch_size 10 
+83: ('tinyhar', False, 10, 'wear', 'sequential')            Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling sequential --batch_size 10 
+84: ('tinyhar', False, 10, 'wetlab', 'shuffle')             Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling shuffle --batch_size 10 
+85: ('tinyhar', False, 10, 'wetlab', 'unbalanced')          Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling unbalanced --batch_size 10 
+86: ('tinyhar', False, 10, 'wetlab', 'balanced')            Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling balanced --batch_size 10 
+87: ('tinyhar', False, 10, 'wetlab', 'sequential')          Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling sequential --batch_size 10 
+88: ('tinyhar', False, 100, 'wear', 'shuffle')              Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling shuffle --batch_size 100 
+89: ('tinyhar', False, 100, 'wear', 'unbalanced')           Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling unbalanced --batch_size 100 
+90: ('tinyhar', False, 100, 'wear', 'balanced')             Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling balanced --batch_size 100 
+91: ('tinyhar', False, 100, 'wear', 'sequential')           Leakage.py --./configs/leakage/wear_loso_tiny.yaml --sampling sequential --batch_size 100 
+92: ('tinyhar', False, 100, 'wetlab', 'shuffle')            Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling shuffle --batch_size 100 
+93: ('tinyhar', False, 100, 'wetlab', 'unbalanced')         Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling unbalanced --batch_size 100 
+94: ('tinyhar', False, 100, 'wetlab', 'balanced')           Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling balanced --batch_size 100 
+95: ('tinyhar', False, 100, 'wetlab', 'sequential')         Leakage.py --./configs/leakage/wetlab_loso_tiny.yaml --sampling sequential --batch_size 100 
