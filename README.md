@@ -58,7 +58,7 @@ In these scripts, config files of the breaching repository are loaded and some p
 For example the noise and clipping can be adjusted in the breaching repository config.
 
 The commands to execute the Federated Learning Leakage scripts are:
-- <p>Leakage.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained </p>
+- <p>Leakage.py --./configs/leakage/wear_loso_deep.yaml --sampling balanced --batch_size 100 --trained </p>
 - <p>LeakageAVG_local.py --./configs/leakage/wear_loso_deep.yaml --batch_size 100 --trained True --num_data_points 500 --num_data_per_local_update_step 100 --num_local_updates 5</p>
 - <p>LeakageAVG_mult.py --./configs/leakage/wear_loso_deep.yaml --trained True --num_data_points 500 --num_data_per_local_update_step 100 --num_local_updates 5 --user_range 5</p>
 
